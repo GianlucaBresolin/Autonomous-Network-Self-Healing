@@ -39,3 +39,18 @@
 
 # debug information files
 *.dwo
+
+# CMake build artifacts
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+_deps
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo

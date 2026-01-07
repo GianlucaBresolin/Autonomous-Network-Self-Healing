@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v clang-format >/dev/null 2>&1; then
+    echo "pre-commit: clang-format not found. Install it (e.g., sudo pacman -S clang)." >&2
+    exit 1
+fi
+
+changed_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|h)$' || true)
+
+if [ -z "${changed_files}" ]; then
+    exit 0
+fi
+
+echo "pre-commit: running clang-format on staged C++ files"
+for file in ${changed_files}; do
+    if [ -f "${file}" ]; then
+        clang-format -i "${file}"
+        git add "${file}"
+    fi
+done
+
+exit 0
