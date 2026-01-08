@@ -13,6 +13,24 @@ target_include_directories(flooding PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# Controller module
+add_library(controller
+    modules/controller/controller.cpp
+)
+
+target_include_directories(controller PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Position module
+add_library(position
+    modules/position/position.cpp
+)
+
+target_include_directories(position PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Fake radio (test utility)
 add_library(fake_radio
     tests/fake_radio.cpp
