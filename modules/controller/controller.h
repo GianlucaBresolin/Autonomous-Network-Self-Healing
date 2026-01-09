@@ -3,10 +3,12 @@
 #include <atomic>
 #include <vector>
 #include <cmath>
+#include <thread>
 #include "../../interfaces/radio.h"
 #include "../position/position.h"
 #include "force.h"
 #include "control_message.h"
+#include "../velocity/velocity_actuator.h"
 
 const float DEFAULT_K_ATT = 1;
 const float DEFAULT_K_REP = 1;
@@ -24,7 +26,8 @@ class Controller {
         );
         ~Controller();
         void startControlLoop(
-            RadioInterface& radio
+            RadioInterface& radio,
+            VelocityActuator& velocity_actuator
         );
         void stopControlLoop();
 
@@ -39,8 +42,8 @@ class Controller {
         Position current_position;
         uint8_t hops_from_base_station;
         
-        void distributedPotentialFieldControlLoop(RadioInterface& radio);
         void computeAttractiveForces(const float K_att,const NeighborInfo& neighbor, Force& force);
         void computeRepulsiveForces(const float K_rep, const NeighborInfo& neighbor, Force& force);
-        void computeVelocityCommand(const Force& force, const float V_max);
+        void computeVelocityCommand(const Force& force, const float V_max, VelocityCommand& cmd);
+        void distributedPotentialFieldControlLoop(RadioInterface& radio, VelocityActuator& velocity_actuator);
 };

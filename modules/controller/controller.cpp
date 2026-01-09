@@ -1,5 +1,4 @@
 #include "controller.h"
-#include <thread>
 
 Controller::Controller(
     uint8_t self_id,
@@ -21,13 +20,15 @@ Controller::~Controller() {
 }
 
 void Controller::startControlLoop(
-    RadioInterface& radio
+    RadioInterface& radio,
+    VelocityActuator& velocity_actuator
 ) {
     mission_active.store(true);
     std::thread loop_thread(
         &Controller::distributedPotentialFieldControlLoop, 
         this, 
-        std::ref(radio)
+        std::ref(radio), 
+        std::ref(velocity_actuator)
     );
     loop_thread.detach();
 }
@@ -45,11 +46,14 @@ void Controller::computeRepulsiveForces(const float K_rep, const NeighborInfo& n
     force = force - K_rep * (1 / std::pow(diff.module(), 2)) * (diff.unit_vector());
 }
 
-void Controller::computeVelocityCommand(const Force& force, const float V_max) {
+void Controller::computeVelocityCommand(const Force& force, const float V_max, VelocityCommand& cmd) {
     // to be implemented
 }
 
-void Controller::distributedPotentialFieldControlLoop(RadioInterface& radio) {
+void Controller::distributedPotentialFieldControlLoop(
+    RadioInterface& radio,
+    VelocityActuator& velocity_actuator
+) {
     while(mission_active.load()) {
         neighbors = radio.getNeighbors();
         current_position.retrieveCurrentPosition();
@@ -65,9 +69,12 @@ void Controller::distributedPotentialFieldControlLoop(RadioInterface& radio) {
                 computeRepulsiveForces(K_rep, *neighbor, F_tot);
         }
 
-        // velocity_command = computeVelocityCommand(F_tot, V_max); // to be implemented
-        // apply(velocity_command); // to be implemented
+        // Velocity Command
+        VelocityCommand velocity_command;
+        computeVelocityCommand(F_tot, V_max, velocity_command);
+        velocity_actuator.applyVelocityCommand(velocity_command);
 
+        // Broadcast Control Message
         ControlMessage msg = ControlMessage{
             .id = self_id,
             .position = current_position,
