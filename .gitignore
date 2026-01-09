@@ -54,3 +54,5 @@ _deps
 .idea/
 *.swp
 *.swo
+
+.directory
