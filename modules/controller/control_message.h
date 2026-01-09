@@ -1,9 +1,10 @@
 #pragma once
 #include <cstdint>
-#include "../position/position.h"
+#include "../../interfaces/position.h"
 
+template <typename T>
 struct ControlMessage {
     uint8_t id;
-    Position position;
+    T position;
     uint8_t hops_from_base_station;
 };

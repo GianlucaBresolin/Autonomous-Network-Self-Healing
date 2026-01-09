@@ -5,3 +5,4 @@ VelocityActuator::VelocityActuator() = default;
 void VelocityActuator::applyVelocityCommand(const VelocityCommand& cmd) {
     // to be implemented
 }
+

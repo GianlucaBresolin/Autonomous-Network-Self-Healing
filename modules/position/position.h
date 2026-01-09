@@ -1,8 +1,9 @@
 #pragma once
 #include <vector>
 #include <cmath>
+#include "../../interfaces/position.h"
 
-class Position {
+class Position : public PositionInterface<Position> {
     public: 
         Position(
             float x_value,
@@ -10,15 +11,17 @@ class Position {
             float z_value
         );
         ~Position() = default; 
-        void retrieveCurrentPosition();
-        std::vector<float> getCoordinates() const;
-        float module() const;
-        Position unit_vector() const;
-        Position operator-(const Position& other) const;
+        void retrieveCurrentPosition() override;
+        std::vector<float> getCoordinates() const override;
+        float module() const override;
+        Position unit_vector() const override;
+        Position operator-(const Position& other) const override;
         friend Position operator*(float scalar, const Position& position);
     
     private:
         float x;
         float y;
         float z;
+
+        Position multiplyByScalar(float scalar) const override;
 };

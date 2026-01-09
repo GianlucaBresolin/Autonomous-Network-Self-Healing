@@ -1,10 +1,11 @@
 #pragma once
-#include "../../interfaces/velocity_actuator_interface.h"
+#include "../../interfaces/velocity_actuator.h"
+#include "velocity_command.h"
 
-class VelocityActuator: public VelocityActuatorInterface {
+class VelocityActuator: public VelocityActuatorInterface<VelocityCommand> {
     public:
         VelocityActuator();
         ~VelocityActuator() = default;
 
-        void applyVelocityCommand(const VelocityCommand& cmd);
+        void applyVelocityCommand(const VelocityCommand& cmd) override;
 };

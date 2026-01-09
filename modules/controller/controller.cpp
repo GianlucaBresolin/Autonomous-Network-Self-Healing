@@ -1,6 +1,7 @@
 #include "controller.h"
 
-Controller::Controller(
+template <typename T>
+Controller<T>::Controller(
     uint8_t self_id,
     float K_att_value,
     float K_rep_value,
@@ -12,47 +13,54 @@ Controller::Controller(
     K_rep(K_rep_value > 0.0 ? K_rep_value : DEFAULT_K_REP),
     D_safe(D_safe > 0.0 ? D_safe : DEFAULT_D_SAFE),
     V_max(V_max > 0.0 ? V_max : DEFAULT_V_MAX),
-    current_position(0.0f, 0.0f, 0.0f)
+    current_position()
 { }
 
-Controller::~Controller() {
+template <typename V>
+Controller<V>::~Controller() {
     stopControlLoop();
 }
 
-void Controller::startControlLoop(
-    RadioInterface& radio,
-    VelocityActuator& velocity_actuator
+template <typename V>
+void Controller<V>::startControlLoop(
+    RadioInterface* radio,
+    VelocityActuatorInterface<V>* velocity_actuator
 ) {
     mission_active.store(true);
     std::thread loop_thread(
         &Controller::distributedPotentialFieldControlLoop, 
         this, 
-        std::ref(radio), 
-        std::ref(velocity_actuator)
+        radio, 
+        velocity_actuator
     );
     loop_thread.detach();
 }
 
-void Controller::stopControlLoop() {
+template <typename V>
+void Controller<V>::stopControlLoop() {
     mission_active.store(false);
 }
 
-void Controller::computeAttractiveForces(const float K_att,const NeighborInfo& neighbor, Force& force) {
+template <typename V>
+void Controller<V>::computeAttractiveForces(const float K_att,const NeighborInfo& neighbor, Force& force) {
     force = force + K_att * (neighbor.position - current_position);
 }
 
-void Controller::computeRepulsiveForces(const float K_rep, const NeighborInfo& neighbor, Force& force) {
+template <typename V>
+void Controller<V>::computeRepulsiveForces(const float K_rep, const NeighborInfo& neighbor, Force& force) {
     Position diff = neighbor.position - current_position;
     force = force - K_rep * (1 / std::pow(diff.module(), 2)) * (diff.unit_vector());
 }
 
-void Controller::computeVelocityCommand(const Force& force, const float V_max, VelocityCommand& cmd) {
+template <typename V>
+void Controller<V>::computeVelocityCommand(const Force& force, const float V_max, V& cmd) {
     // to be implemented
 }
 
-void Controller::distributedPotentialFieldControlLoop(
-    RadioInterface& radio,
-    VelocityActuator& velocity_actuator
+template <typename V>
+void Controller<V>::distributedPotentialFieldControlLoop(
+    RadioInterface* radio,
+    VelocityActuatorInterface<V>* velocity_actuator
 ) {
     while(mission_active.load()) {
         neighbors = radio.getNeighbors();
@@ -70,7 +78,7 @@ void Controller::distributedPotentialFieldControlLoop(
         }
 
         // Velocity Command
-        VelocityCommand velocity_command;
+        V velocity_command;
         computeVelocityCommand(F_tot, V_max, velocity_command);
         velocity_actuator.applyVelocityCommand(velocity_command);
 
