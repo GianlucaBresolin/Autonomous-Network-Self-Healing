@@ -1,8 +1,8 @@
 #pragma once 
+#include "velocity_command.h"
 
-template <typename T> // VelocityCommand
 class VelocityActuatorInterface {
     public:
         virtual ~VelocityActuatorInterface() = default;
-        virtual void applyVelocityCommand(const T& cmd) = 0;
+        virtual void applyVelocityCommand(const VelocityCommandInterface* cmd) = 0;
 };

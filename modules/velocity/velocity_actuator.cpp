@@ -2,7 +2,7 @@
 
 VelocityActuator::VelocityActuator() = default;
 
-void VelocityActuator::applyVelocityCommand(const VelocityCommand& cmd) {
+void VelocityActuator::applyVelocityCommand(const VelocityCommandInterface* cmd) {
     // to be implemented
 }
 

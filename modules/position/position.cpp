@@ -4,7 +4,10 @@ Position::Position(
     float x_value,
     float y_value,
     float z_value
-) : x(x_value), y(y_value), z(z_value) 
+) : 
+    x(x_value), 
+    y(y_value), 
+    z(z_value) 
 { }
 
 void Position::retrieveCurrentPosition() {
@@ -16,35 +19,38 @@ std::vector<float> Position::getCoordinates() const {
 }
 
 float Position::module() const {
-    return std::sqrt(x * x + y * y + z * z);
+    return std::sqrt( x * x + y * y + z * z);
 }
 
-Position Position::unit_vector() const {
-    float mod = module();
+PositionInterface* Position::distanceFrom(const PositionInterface* other) const {
+    const Position* other_position = dynamic_cast<const Position*>(other);
+    if (other_position == nullptr) {
+        return nullptr;
+    }
+    return new Position(
+        other_position->x - this->x,
+        other_position->y - this->y,
+        other_position->z - this->z
+    );
+}
+
+PositionInterface* Position::unit_vector() const {
+    float mod = this->module();
     if (mod == 0) {
         // Avoid division by zero
-        return Position(0.0f, 0.0f, 0.0f); 
+        return new Position(0.0, 0.0, 0.0);
     } 
-    return Position(
-        x / mod,
-        y / mod,
-        z / mod
-    );
+    return new Position{
+        this->x / mod,
+        this->y / mod,
+        this->z / mod
+    };
 }
 
-Position Position::operator-(const Position& other) const {
-    Position aux = Position(
-        x - other.x,
-        y - other.y,
-        z - other.z
-    );
-    return aux;
-}
-
-Position operator*(float scalar, const Position& position) {
-    return Position(
-        scalar * position.x,
-        scalar * position.y,
-        scalar * position.z
+PositionInterface* Position::multiplyByScalar(float scalar) const {
+    return new Position(
+        this->x * scalar,
+        this->y * scalar,
+        this->z * scalar
     );
 }

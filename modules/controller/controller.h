@@ -4,9 +4,11 @@
 #include <vector>
 #include <cmath>
 #include <thread>
-#include "../../interfaces/radio.h"
+#include "../../interfaces/communication_manager.h"
 #include "../../interfaces/velocity_actuator.h"
 #include "../../interfaces/position.h"
+#include "../../interfaces/neighbor_manager.h"
+#include "../../interfaces/neighbor_info.h"
 #include "force.h"
 #include "control_message.h"
 
@@ -15,7 +17,6 @@ const float DEFAULT_K_REP = 1;
 const float DEFAULT_D_SAFE = 1;
 const float DEFAULT_V_MAX = 1;
 
-template <typename V> // VelocityCommand
 class Controller {
     public:
         Controller(
@@ -27,8 +28,10 @@ class Controller {
         );
         ~Controller();
         void startControlLoop(
-            RadioInterface* radio,
-            VelocityActuatorInterface<V>* velocity_actuator
+            CommunicationManagerInterface* communication_manager,
+            VelocityActuatorInterface* velocity_actuator,
+            NeighborManagerInterface* neighbor_manager, 
+            PositionInterface* initial_position
         );
         void stopControlLoop();
 
@@ -39,12 +42,16 @@ class Controller {
         const float D_safe;
         const float V_max;     
         std::atomic<bool> mission_active{false}; 
-        std::vector<NeighborInfo*> neighbors;
+        std::vector<NeighborInfoInterface*> neighbors;
         PositionInterface* current_position;
         uint8_t hops_from_base_station;
         
-        void computeAttractiveForces(const float K_att,const NeighborInfo& neighbor, Force& force);
-        void computeRepulsiveForces(const float K_rep, const NeighborInfo& neighbor, Force& force);
-        void computeVelocityCommand(const Force& force, const float V_max, V& cmd);
-        void distributedPotentialFieldControlLoop(RadioInterface* radio, VelocityActuatorInterface<V>* velocity_actuator);
+        void computeAttractiveForces(const float K_att, const PositionInterface* diff, Force& force);
+        void computeRepulsiveForces(const float K_rep, const PositionInterface* diff, Force& force);
+        void computeVelocityCommand(const Force& force, const float V_max, VelocityCommandInterface* cmd);
+        void distributedPotentialFieldControlLoop(
+            CommunicationManagerInterface* communication_manager, 
+            VelocityActuatorInterface* velocity_actuator,
+            NeighborManagerInterface* neighbor_manager
+    );
 };

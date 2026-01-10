@@ -11,15 +11,9 @@ struct Packet {
     std::vector<uint8_t> payload;
 };
 
-struct NeighborInfo {
-    uint8_t neighbor_id;
-    uint8_t hops_from_base_station;
-    Position position;
-};
-
-class RadioInterface {
+class CommunicationManagerInterface {
    public:
-    virtual ~RadioInterface() = default;
+    virtual ~CommunicationManagerInterface() = default;
     virtual void send(const Packet& pkt) = 0;
-    virtual std::vector<NeighborInfo*> getNeighbors() = 0;
+    virtual void receive(Packet& pkt) = 0;
 };

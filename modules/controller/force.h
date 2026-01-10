@@ -1,5 +1,5 @@
 #pragma once
-#include "../position/position.h"
+#include "../../interfaces/position.h"
 
 struct Force {
     float x;
@@ -7,11 +7,20 @@ struct Force {
     float z;
 };
 
-Force operator+(const Force& f, const Position& p) {
-    std::vector<float> coords = p.getCoordinates();
+Force operator+(const Force& f, const PositionInterface* p) {
+    std::vector<float> coords = p->getCoordinates();
     return Force{
         f.x + coords[0], // x
         f.y + coords[1], // y
         f.z + coords[2]  // z
+    };
+}
+
+Force operator-(const Force& f, const PositionInterface* p) {
+    std::vector<float> coords = p->getCoordinates();
+    return Force{
+        f.x - coords[0], // x
+        f.y - coords[1], // y
+        f.z - coords[2]  // z
     };
 }
