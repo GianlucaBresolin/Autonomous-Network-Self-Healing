@@ -40,12 +40,17 @@ void Controller::stopControlLoop() {
     mission_active.store(false);
 }
 
-void Controller::computeAttractiveForces(const float K_att, const PositionInterface* diff, Force& force) {
+void Controller::computeAttractiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force) {
     force = force + diff->multiplyByScalar(K_att);
 }
 
-void Controller::computeRepulsiveForces(const float K_rep, const PositionInterface* diff, Force& force) {
-    force = force - diff->unit_vector()->multiplyByScalar(K_rep / std::pow(diff->module(), 2));
+void Controller::computeRepulsiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force) {
+    float distance = diff->module();
+    if (diff->module() == 0) {
+        // Avoid division by zero
+        return; 
+    }
+    force = force - diff->unit_vector()->multiplyByScalar(K_rep / std::pow(distance, 2));
 }
 
 void Controller::computeVelocityCommand(const Force& force, const float V_max, VelocityCommandInterface* cmd) {
@@ -65,14 +70,14 @@ void Controller::distributedPotentialFieldControlLoop(
         Force F_tot = Force{0.0f, 0.0f, 0.0f};
         for(const NeighborInfoInterface* neighbor: neighbors) {
             const uint8_t neighbor_hops = neighbor->getHopsToBaseStation();
-            PositionInterface* diff = current_position->distanceFrom(neighbor->getPosition());
+            std::unique_ptr<PositionInterface> diff = current_position->distanceFrom(neighbor->getPosition());
             if (neighbor_hops < hops_from_base_station || neighbor_hops > hops_from_base_station) {
                 // Attractive force 
-                computeAttractiveForces(K_att, diff, F_tot);
+                computeAttractiveForces(diff, F_tot);
             }
-            if ((*diff).module() < D_safe) {
+            if (diff->module() < D_safe) {
                 // Repulsive force
-                computeRepulsiveForces(K_rep, diff, F_tot);
+                computeRepulsiveForces(diff, F_tot);
             }
         }
 

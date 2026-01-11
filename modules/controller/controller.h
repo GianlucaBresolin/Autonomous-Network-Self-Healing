@@ -46,8 +46,8 @@ class Controller {
         PositionInterface* current_position;
         uint8_t hops_from_base_station;
         
-        void computeAttractiveForces(const float K_att, const PositionInterface* diff, Force& force);
-        void computeRepulsiveForces(const float K_rep, const PositionInterface* diff, Force& force);
+        void computeAttractiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force);
+        void computeRepulsiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force);
         void computeVelocityCommand(const Force& force, const float V_max, VelocityCommandInterface* cmd);
         void distributedPotentialFieldControlLoop(
             CommunicationManagerInterface* communication_manager, 

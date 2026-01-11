@@ -22,35 +22,35 @@ float Position::module() const {
     return std::sqrt( x * x + y * y + z * z);
 }
 
-PositionInterface* Position::distanceFrom(const PositionInterface* other) const {
+std::unique_ptr<PositionInterface> Position::distanceFrom(const PositionInterface* other) const {
     const Position* other_position = dynamic_cast<const Position*>(other);
     if (other_position == nullptr) {
         return nullptr;
     }
-    return new Position(
-        other_position->x - this->x,
-        other_position->y - this->y,
-        other_position->z - this->z
+    return std::make_unique<Position>(
+        other_position->x - x,
+        other_position->y - y,
+        other_position->z - z
     );
 }
 
-PositionInterface* Position::unit_vector() const {
-    float mod = this->module();
+std::unique_ptr<PositionInterface> Position::unit_vector() const {
+    float mod = module();
     if (mod == 0) {
         // Avoid division by zero
-        return new Position(0.0, 0.0, 0.0);
+        return std::make_unique<Position>(0.0, 0.0, 0.0);
     } 
-    return new Position{
-        this->x / mod,
-        this->y / mod,
-        this->z / mod
-    };
+    return std::make_unique<Position>(
+        x / mod,
+        y / mod,
+        z / mod
+    );
 }
 
-PositionInterface* Position::multiplyByScalar(float scalar) const {
-    return new Position(
-        this->x * scalar,
-        this->y * scalar,
-        this->z * scalar
+std::unique_ptr<PositionInterface> Position::multiplyByScalar(float scalar) const {
+    return std::make_unique<Position>(
+        x * scalar,
+        y * scalar,
+        z * scalar
     );
 }
