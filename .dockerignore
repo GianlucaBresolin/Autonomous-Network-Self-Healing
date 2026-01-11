@@ -1,0 +1,25 @@
+.git
+.gitignore
+.vscode
+.idea
+
+# CMake / build outputs
+build
+build/
+**/build
+**/build/
+cmake-build-*
+CMakeFiles
+CMakeCache.txt
+
+# Common artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.out
+
+# Local caches
+**/.cache
+**/.cache/
