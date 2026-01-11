@@ -1,5 +1,4 @@
 #pragma once
-
 #include <cstdint>
 #include <vector>
 
@@ -12,8 +11,8 @@ struct Packet {
 };
 
 class CommunicationManagerInterface {
-   public:
-    virtual ~CommunicationManagerInterface() = default;
-    virtual void send(const Packet& pkt) = 0;
-    virtual void receive(Packet& pkt) = 0;
+    public:
+        virtual ~CommunicationManagerInterface() = default;
+        virtual void send(const ::Packet& pkt) = 0;
+        virtual void receive(::Packet& pkt) = 0;
 };

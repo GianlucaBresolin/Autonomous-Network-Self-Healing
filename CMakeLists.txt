@@ -31,12 +31,12 @@ target_include_directories(position PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Fake radio (test utility)
-add_library(fake_radio
-    tests/fake_radio.cpp
+# Fake communication manager (test utility)
+add_library(fake_communication_manager
+    tests/fake_communication_manager.cpp
 )
 
-target_include_directories(fake_radio PUBLIC
+target_include_directories(fake_communication_manager PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -47,7 +47,7 @@ add_executable(flooding_app
 
 target_link_libraries(flooding_app
     flooding
-    fake_radio
+    fake_communication_manager
 )
 
 # Optional formatting helper
