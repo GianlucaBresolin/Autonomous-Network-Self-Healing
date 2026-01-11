@@ -4,22 +4,23 @@ Autonomous Network Self-Healing (Flooding Prototype)
 Overview
 --------
 Small C++17 prototype for autonomous self-healing in drone swarms using a flooding-based
-discovery and reply mechanism. The current code runs entirely in a simulated in-memory radio
-layer for fast iteration.
+discovery and reply mechanism. The current code runs entirely in a simulated in-memory
+communication manager layer for fast iteration.
 
 Current layout
 --------------
 - [apps/flooding/main.cpp](apps/flooding/main.cpp): demo wiring five nodes together over the fake
-  radio and starting floods.
+  communication manager and starting floods.
+- [apps/ns3_flooding/swarm_flooding.cc](apps/ns3_flooding/swarm_flooding.cc): ns-3 scratch scenario that exercises the flooding logic.
 - [modules/flooding/flood.cpp](modules/flooding/flood.cpp),
   [modules/flooding/flood.h](modules/flooding/flood.h),
   [modules/flooding/messages.h](modules/flooding/messages.h): flooding logic and message formats.
-- [interfaces/radio.h](interfaces/radio.h): abstract radio interface (send plus Packet type).
-- [tests/fake_radio.cpp](tests/fake_radio.cpp),
-  [tests/fake_radio.h](tests/fake_radio.h): in-memory radio implementation with neighbor links and
+- [interfaces/communication_manager.h](interfaces/communication_manager.h): abstract communication manager interface (send plus Packet type).
+- [tests/fake_communication_manager.cpp](tests/fake_communication_manager.cpp),
+  [tests/fake_communication_manager.h](tests/fake_communication_manager.h): in-memory communication manager implementation with neighbor links and
   RX callbacks for simulation/testing.
-- [platform/crazyflie](platform/crazyflie) and [platform/ns3](platform/ns3): placeholders for real
-  or simulated backends (empty for now).
+- [platform/ns3](platform/ns3): ns-3 adapter/backend code used by the scratch scenario.
+- [apps/crazyflie](apps/crazyflie): small Python helpers for the Crazyflie “hardware lane”.
 
 Platform setup
 --------------
@@ -84,6 +85,27 @@ cmake --build build
 ./build/flooding_app
 ```
 
+Docker + ns-3 (recommended for simulation)
+-----------------------------------------
+This repo includes a Docker workflow that builds ns-3 once, then lets you run ns-3 scratch programs against your local working tree via a bind-mount.
+
+Build the image (slow, but cached):
+```bash
+docker build -t ns3-local:dev .
+```
+
+Run the flooding ns-3 scenario (fast iteration):
+```bash
+docker run --rm -v "$PWD":/workspace/Autonomous-Network-Self-Healing ns3-local:dev ./ns3 run scratch/swarm_flooding.cc
+```
+
+Notes:
+- The container entrypoint symlinks `apps/ns3_flooding/*.cc` into `/opt/ns-3-dev/scratch/` on startup.
+- `./ns3` is supported as a convenience: it is routed to `/opt/ns-3-dev/ns3` inside the container.
+- Avoid reusing the same `build/` directory between host and container builds; CMake caches absolute paths.
+
+For a deeper explanation of the container workflow, see [tmp/docker_container_explained.md](tmp/docker_container_explained.md).
+
 **Windows (Visual Studio):**
 - Open folder in Visual Studio, it will auto-configure CMake
 - Press F5 to build and run, or use Build menu
@@ -98,7 +120,7 @@ cmake --build build
 
 What the demo does
 ------------------
-- Builds a small topology (0-1-2-3 and 2-4) using FakeRadio neighbors.
+- Builds a small topology (0-1-2-3 and 2-4) using FakeCommunicationManager neighbors.
 - Each node owns a Flooding instance; RX callbacks hand packets to `Flooding::onPacketReceived`.
 - `startFlood(flood_id)` broadcasts a FloodDiscoveryMsg.
 - On first receipt of a discovery, a node records the flood_id, sends one FloodReplyMsg back to the
@@ -106,7 +128,7 @@ What the demo does
 
 C++ style conventions
 ---------------------
-- Types: PascalCase (Flooding, FakeRadio).
+- Types: PascalCase (Flooding, FakeCommunicationManager).
 - Functions/methods: lowerCamelCase (startFlood, onPacketReceived).
 - Variables: lower_snake_case; constants ALL_CAPS or kPascalCase for scoped constants.
 - Enums: PascalCase type names; enumerators in ALL_CAPS (DISCOVERY, REPLY).
@@ -114,7 +136,7 @@ C++ style conventions
   project headers.
 - Formatting: 4-space indent, K&R braces, limit lines to ~100 cols, no `using namespace std;`.
 - Use const, constexpr, references, and smart pointers; avoid owning raw pointers unless
-  interop/testing requires them (the fake radio keeps raw neighbor pointers by design).
+  interop/testing requires them (the fake communication manager keeps raw neighbor pointers by design).
 - Prefer small, focused headers; keep implementation details in .cpp files.
 
 Formatting with clang-format
@@ -154,10 +176,10 @@ Git commit convention
   - test: add/adjust tests
   - refactor: code change without behavior change
   - chore: tooling, deps, CI, formatting
-- Scope is optional but encouraged (e.g., flooding, radio, docs).
+- Scope is optional but encouraged (e.g., flooding, communication_manager, docs).
 - Summary in imperative mood, max ~72 chars. Body (if needed) explains what/why; wrap at 72 chars.
 
 Next steps
 ----------
-- Add real radio backends under platform/ (e.g., Crazyflie, ns-3) implementing RadioInterface.
+- Add real communication manager backends under platform/ (e.g., Crazyflie, ns-3) implementing CommunicationManagerInterface.
 - Keep running clang-format before pushes to preserve the shared style.
