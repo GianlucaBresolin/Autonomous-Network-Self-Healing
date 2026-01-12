@@ -19,7 +19,7 @@ Controller::~Controller() {
 }
 
 void Controller::startControlLoop(
-    CommunicationManagerInterface* communication_manager,
+    FloodingManagerInterface* flooding_manager,
     VelocityActuatorInterface* velocity_actuator, 
     NeighborManagerInterface* neighbor_manager,
     PositionInterface* initial_position
@@ -29,7 +29,7 @@ void Controller::startControlLoop(
     std::thread loop_thread(
         &Controller::distributedPotentialFieldControlLoop, 
         this, 
-        communication_manager, 
+        flooding_manager, 
         velocity_actuator, 
         neighbor_manager
     );
@@ -58,14 +58,14 @@ void Controller::computeVelocityCommand(const Force& force, const float V_max, V
 }
 
 void Controller::distributedPotentialFieldControlLoop(
-    CommunicationManagerInterface* communication_manager,
+    FloodingManagerInterface* flooding_manager,
     VelocityActuatorInterface* velocity_actuator,
     NeighborManagerInterface* neighbor_manager
 ) {
     while(mission_active.load()) {
         neighbors = neighbor_manager->getNeighbors();
         current_position->retrieveCurrentPosition();
-        // hops_from_base_station = getHopsFromBaseStation(); // to be implemented
+        uint8_t hops_from_base_station = flooding_manager->getHopsFromBase();
 
         Force F_tot = Force{0.0f, 0.0f, 0.0f};
         for(const NeighborInfoInterface* neighbor: neighbors) {
@@ -86,16 +86,11 @@ void Controller::distributedPotentialFieldControlLoop(
         computeVelocityCommand(F_tot, V_max, velocity_command);
         velocity_actuator->applyVelocityCommand(velocity_command);
 
-        // Broadcast Control Message
-        // ControlMessage msg = ControlMessage{
-        //     .id = self_id,
-        //     .position = current_position,
-        //     .hops_from_base_station = hops_from_base_station
-        // };
-        // Packet control_pkt;
-        // control_pkt.src = self_id;
-        // control_pkt.dst = BROADCAST_ID;
-        // std::memcpy(control_pkt.payload.data(), &msg, sizeof(msg));
-        // communication_manager->send(control_pkt);
+        // Broadcast to neighbors
+        neighbor_manager->sendToNeighbors(
+            self_id, 
+            current_position,
+            hops_from_base_station
+        );
     }
 }

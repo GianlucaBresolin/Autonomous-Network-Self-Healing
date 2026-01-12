@@ -186,7 +186,7 @@ void InitiatorSendHopTable(NodeCtx* initiator, uint8_t base_id, uint16_t flood_i
 }
 
 int main(int argc, char* argv[]) {
-  ns3::Time::SetResolution(ns3::Time::NS);
+ ns3::Time::SetResolution(ns3::Time::NS);
 
   const uint32_t nNodes = 10;
   ns3::NodeContainer nodes;

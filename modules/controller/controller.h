@@ -4,13 +4,12 @@
 #include <vector>
 #include <cmath>
 #include <thread>
-#include "../../interfaces/communication_manager.h"
+#include "../../interfaces/flooding_manager.h"
 #include "../../interfaces/velocity_actuator.h"
 #include "../../interfaces/position.h"
 #include "../../interfaces/neighbor_manager.h"
 #include "../../interfaces/neighbor_info.h"
 #include "force.h"
-#include "control_message.h"
 
 const float DEFAULT_K_ATT = 1;
 const float DEFAULT_K_REP = 1;
@@ -28,7 +27,7 @@ class Controller {
         );
         ~Controller();
         void startControlLoop(
-            CommunicationManagerInterface* communication_manager,
+            FloodingManagerInterface* flooding_manager,
             VelocityActuatorInterface* velocity_actuator,
             NeighborManagerInterface* neighbor_manager, 
             PositionInterface* initial_position
@@ -44,13 +43,12 @@ class Controller {
         std::atomic<bool> mission_active{false}; 
         std::vector<NeighborInfoInterface*> neighbors;
         PositionInterface* current_position;
-        uint8_t hops_from_base_station;
         
         void computeAttractiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force);
         void computeRepulsiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force);
         void computeVelocityCommand(const Force& force, const float V_max, VelocityCommandInterface* cmd);
         void distributedPotentialFieldControlLoop(
-            CommunicationManagerInterface* communication_manager, 
+            FloodingManagerInterface* flooding_manager,
             VelocityActuatorInterface* velocity_actuator,
             NeighborManagerInterface* neighbor_manager
     );

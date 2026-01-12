@@ -11,6 +11,71 @@ Flooding::Flooding(
     communication_manager(cm)
 { }
 
+void Flooding::onPacketReceived(const ::Packet& pkt) {
+    if (pkt.payload.empty()) {
+        return;
+    }
+
+    auto type = static_cast<FloodMsgType>(pkt.payload[0]);
+
+    switch(type) {
+        case FloodMsgType::START: {
+            FloodStartMsg msg;
+            if (decodeStart(pkt, msg)) {
+                handleStart(msg);
+            }
+            break;
+        }
+        case FloodMsgType::DISCOVERY: {
+            FloodDiscoveryMsg msg; 
+            if (decodeDiscovery(pkt, msg)) {
+                handleDiscovery(msg);
+            }
+            break;
+        }
+        case FloodMsgType::REPORT: {
+            FloodReportMsg msg;
+            if (decodeReport(pkt, msg)) {
+                handleReport(msg);
+            }    
+        }
+        default:
+            // unrecognized message type
+            return;
+    }
+}
+
+std::vector<std::pair<uint8_t, uint8_t>> Flooding::getHopTableToBase(uint16_t flood_id) const {
+    std::vector<std::pair<uint8_t, uint8_t>> out;
+    auto it = hop_table_to_initiator.find(flood_id);
+    if (it == hop_table_to_initiator.end()) {
+        return out;
+    }
+
+    out.reserve(it->second.size());
+    for (const auto& kv : it->second) {
+        const uint8_t node_id = kv.first;
+        const uint8_t hop_to_initiator = kv.second;
+        const uint8_t hop_to_base = static_cast<uint8_t>(hop_to_initiator + 1);
+        out.emplace_back(node_id, hop_to_base);
+    }
+    return out;
+}
+
+uint8_t Flooding::getHopsFromBase() const {
+    // higher flood_id means more recent flood
+    uint16_t latest_flood_id = 0;
+    for( auto [flood_id, hops_to_initiator] : best_hop_to_initiator ) {
+        latest_flood_id = (latest_flood_id < flood_id) ? flood_id : latest_flood_id;
+    }
+    auto it = best_hop_to_initiator.find(latest_flood_id);
+    if (it == best_hop_to_initiator.end()) {
+        // no floods seen yet
+        return UINT8_MAX;
+    }
+    return static_cast<uint8_t>(it->second + 1);
+}
+
 void Flooding::startFlood(uint16_t flood_id) {
     // Initiator seeds the flood.
     FloodDiscoveryMsg msg;
@@ -31,33 +96,6 @@ void Flooding::startFlood(uint16_t flood_id) {
     std::memcpy(pkt.payload.data(), &msg, sizeof(msg));
 
     communication_manager.send(pkt);
-}
-
-void Flooding::onPacketReceived(const ::Packet& pkt) {
-    if (pkt.payload.empty()) {
-        return;
-    }
-
-    auto type = static_cast<FloodMsgType>(pkt.payload[0]);
-
-    if (type == FloodMsgType::START) {
-        FloodStartMsg msg;
-        if (decodeStart(pkt, msg)) {
-            handleStart(msg);
-        }
-    }
-    if (type == FloodMsgType::DISCOVERY) {
-        FloodDiscoveryMsg msg;
-        if (decodeDiscovery(pkt, msg)) {
-            handleDiscovery(msg);
-        }
-    }
-    if (type == FloodMsgType::REPORT) {
-        FloodReportMsg msg;
-        if (decodeReport(pkt, msg)) {
-            handleReport(msg);
-        }
-    }
 }
 
 void Flooding::handleStart(const FloodStartMsg& msg) {
@@ -160,23 +198,6 @@ void Flooding::handleReport(const FloodReportMsg& msg) {
     pkt.payload.resize(sizeof(msg));
     std::memcpy(pkt.payload.data(), &msg, sizeof(msg));
     communication_manager.send(pkt);
-}
-
-std::vector<std::pair<uint8_t, uint8_t>> Flooding::getHopTableToBase(uint16_t flood_id) const {
-    std::vector<std::pair<uint8_t, uint8_t>> out;
-    auto it = hop_table_to_initiator.find(flood_id);
-    if (it == hop_table_to_initiator.end()) {
-        return out;
-    }
-
-    out.reserve(it->second.size());
-    for (const auto& kv : it->second) {
-        const uint8_t node_id = kv.first;
-        const uint8_t hop_to_initiator = kv.second;
-        const uint8_t hop_to_base = static_cast<uint8_t>(hop_to_initiator + 1);
-        out.emplace_back(node_id, hop_to_base);
-    }
-    return out;
 }
 
 bool Flooding::decodeStart(const ::Packet& pkt, FloodStartMsg& msg) {
