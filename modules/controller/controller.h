@@ -4,12 +4,13 @@
 #include <vector>
 #include <cmath>
 #include <thread>
+#include <memory>
+#include "../../common/vector3D.h"
 #include "../../interfaces/flooding_manager.h"
 #include "../../interfaces/velocity_actuator.h"
 #include "../../interfaces/position.h"
 #include "../../interfaces/neighbor_manager.h"
 #include "../../interfaces/neighbor_info.h"
-#include "force.h"
 
 const float DEFAULT_K_ATT = 1;
 const float DEFAULT_K_REP = 1;
@@ -44,9 +45,9 @@ class Controller {
         std::vector<NeighborInfoInterface*> neighbors;
         PositionInterface* current_position;
         
-        void computeAttractiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force);
-        void computeRepulsiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force);
-        void computeVelocityCommand(const Force& force, const float V_max, VelocityCommandInterface* cmd);
+        void computeAttractiveForces(const Vector3D& diff, Vector3D& force);
+        void computeRepulsiveForces(const Vector3D& diff, Vector3D& force);
+        void computeVelocityCommand(const Vector3D& force, const float V_max, VelocityCommandInterface* cmd);
         void distributedPotentialFieldControlLoop(
             FloodingManagerInterface* flooding_manager,
             VelocityActuatorInterface* velocity_actuator,

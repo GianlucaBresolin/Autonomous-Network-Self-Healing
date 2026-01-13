@@ -261,7 +261,7 @@ int main(int argc, char* argv[]) {
     ctx[i].socket->SetRecvCallback(ns3::MakeBoundCallback(&SocketRx, &ctx[i]));
   }
 
-  ns3::Simulator::Stop(ns3::Seconds(12));
+  ns3::Simulator::Stop(ns3::Seconds(12)); 
 
   const uint16_t flood_id = 42;
 

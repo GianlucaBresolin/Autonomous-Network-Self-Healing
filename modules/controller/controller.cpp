@@ -40,20 +40,20 @@ void Controller::stopControlLoop() {
     mission_active.store(false);
 }
 
-void Controller::computeAttractiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force) {
-    force = force + diff->multiplyByScalar(K_att);
+void Controller::computeAttractiveForces(const Vector3D& diff, Vector3D& force) {
+    force = force + (K_att * diff);
 }
 
-void Controller::computeRepulsiveForces(const std::unique_ptr<PositionInterface>& diff, Force& force) {
-    float distance = diff->module();
-    if (diff->module() == 0) {
+void Controller::computeRepulsiveForces(const Vector3D& diff, Vector3D& force) {
+    float distance = diff.module();
+    if (distance == 0) {
         // Avoid division by zero
         return; 
     }
-    force = force - diff->unit_vector()->multiplyByScalar(K_rep / std::pow(distance, 2));
+    force = force - (K_rep / std::pow(distance, 2)) * diff.unit_vector();
 }
 
-void Controller::computeVelocityCommand(const Force& force, const float V_max, VelocityCommandInterface* cmd) {
+void Controller::computeVelocityCommand(const Vector3D& force, const float V_max, VelocityCommandInterface* cmd) {
     // to be implemented
 }
 
@@ -67,15 +67,15 @@ void Controller::distributedPotentialFieldControlLoop(
         current_position->retrieveCurrentPosition();
         uint8_t hops_from_base_station = flooding_manager->getHopsFromBase();
 
-        Force F_tot = Force{0.0f, 0.0f, 0.0f};
+        Vector3D F_tot = Vector3D{0.0f, 0.0f, 0.0f};
         for(const NeighborInfoInterface* neighbor: neighbors) {
             const uint8_t neighbor_hops = neighbor->getHopsToBaseStation();
-            std::unique_ptr<PositionInterface> diff = current_position->distanceFrom(neighbor->getPosition());
+            Vector3D diff = current_position->distanceFrom(neighbor->getPosition());
             if (neighbor_hops < hops_from_base_station || neighbor_hops > hops_from_base_station) {
                 // Attractive force 
                 computeAttractiveForces(diff, F_tot);
             }
-            if (diff->module() < D_safe) {
+            if (diff.module() < D_safe) {
                 // Repulsive force
                 computeRepulsiveForces(diff, F_tot);
             }

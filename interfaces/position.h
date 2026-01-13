@@ -1,14 +1,11 @@
 #pragma once
 #include <vector>
-#include <memory>
+#include "../../common/vector3D.h"
 
 class PositionInterface {
     public:
         virtual ~PositionInterface() = default;
         virtual void retrieveCurrentPosition() = 0;
-        virtual std::vector<float> getCoordinates() const = 0;
-        virtual float module() const = 0;
-        virtual std::unique_ptr<PositionInterface> distanceFrom(const PositionInterface* other) const = 0;
-        virtual std::unique_ptr<PositionInterface> unit_vector() const = 0;
-        virtual std::unique_ptr<PositionInterface> multiplyByScalar(float scalar) const = 0;
+        virtual std::vector<double> getCoordinates() const = 0;
+        virtual Vector3D distanceFrom(const PositionInterface* other) const = 0;
 };
