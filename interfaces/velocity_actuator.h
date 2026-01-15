@@ -1,8 +1,8 @@
 #pragma once 
-#include "velocity_command.h"
+#include "../../common/vector3D.h"
 
 class VelocityActuatorInterface {
     public:
         virtual ~VelocityActuatorInterface() = default;
-        virtual void applyVelocityCommand(const VelocityCommandInterface* cmd) = 0;
+        virtual void applyVelocity(const Vector3D velocity) = 0;
 };

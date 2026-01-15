@@ -53,7 +53,7 @@ void Controller::computeRepulsiveForces(const Vector3D& diff, Vector3D& force) {
     force = force - (K_rep / std::pow(distance, 2)) * diff.unit_vector();
 }
 
-void Controller::computeVelocityCommand(const Vector3D& force, const float V_max, VelocityCommandInterface* cmd) {
+void Controller::computeVelocityCommand(const Vector3D& force, const float V_max, Vector3D* new_velocity) {
     // to be implemented
 }
 
@@ -82,9 +82,9 @@ void Controller::distributedPotentialFieldControlLoop(
         }
 
         // Velocity Command
-        VelocityCommandInterface* velocity_command;
-        computeVelocityCommand(F_tot, V_max, velocity_command);
-        velocity_actuator->applyVelocityCommand(velocity_command);
+        Vector3D new_velocity(0.0, 0.0, 0.0);
+        computeVelocityCommand(F_tot, V_max, &new_velocity);
+        velocity_actuator->applyVelocity(new_velocity);
 
         // Broadcast to neighbors
         neighbor_manager->sendToNeighbors(

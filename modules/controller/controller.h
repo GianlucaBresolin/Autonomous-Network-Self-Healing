@@ -47,7 +47,7 @@ class Controller {
         
         void computeAttractiveForces(const Vector3D& diff, Vector3D& force);
         void computeRepulsiveForces(const Vector3D& diff, Vector3D& force);
-        void computeVelocityCommand(const Vector3D& force, const float V_max, VelocityCommandInterface* cmd);
+        void computeVelocityCommand(const Vector3D& force, const float V_max, Vector3D* new_velocity);
         void distributedPotentialFieldControlLoop(
             FloodingManagerInterface* flooding_manager,
             VelocityActuatorInterface* velocity_actuator,

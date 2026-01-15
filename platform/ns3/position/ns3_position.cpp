@@ -1,26 +1,26 @@
 #include "ns3_position.h"
 
 Ns3Position::Ns3Position(
-    ns3::Ptr<ns3::MobilityModel> mobility
+    CustomMobility* mobility
 ) : mobility(mobility)
 { 
-    ns3::Vector pos = mobility->GetPosition();
-    latitude = pos.x;
-    longitude = pos.y;
-    altitude = pos.z;
+    std::vector<double> pos = mobility->GetPosition();
+    latitude = pos[0];
+    longitude = pos[1];
+    altitude = pos[2];
 }
 
 void Ns3Position::retrieveCurrentPosition() {
-    ns3::Vector pos = mobility->GetGeographicPosition();
-    latitude = pos.x;
-    longitude = pos.y;
-    altitude = pos.z;
+    std::vector<double> pos = mobility->GetGeographicPosition();
+    latitude = pos[0];
+    longitude = pos[1];
+    altitude = pos[2];
 }
 
 std::vector<double> Ns3Position::getCoordinates() const {
     ns3::Vector coordinates = ns3::GeographicPositions::GeographicToGeocentricCoordinates(
         latitude, longitude, altitude,
-        ns3::GeographicPosition::WGS84
+        ns3::GeographicPositions::WGS84
     );
     return {
         coordinates.x, 
