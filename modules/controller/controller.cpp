@@ -54,7 +54,16 @@ void Controller::computeRepulsiveForces(const Vector3D& diff, Vector3D& force) {
 }
 
 void Controller::computeVelocityCommand(const Vector3D& force, const float V_max, Vector3D* new_velocity) {
-    // to be implemented
+    double force_magnitude = force.module();
+    if (force_magnitude == 0) {
+        *new_velocity = Vector3D{0.0, 0.0, 0.0};
+        return;
+    }
+    if (force_magnitude > V_max) {
+        *new_velocity = V_max * force.unit_vector();
+        return;
+    }
+    *new_velocity = force;
 }
 
 void Controller::distributedPotentialFieldControlLoop(
