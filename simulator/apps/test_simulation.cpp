@@ -1,5 +1,6 @@
 
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -9,17 +10,13 @@
 #include "ns3/mobility-module.h"
 #include "ns3/network-module.h"
 
-#include "comm/RadioEnvironment.h"
-#include "core/BaseStation.h"
-#include "core/Drone.h"
+#include "modules/core/base_station.h"
+#include "modules/core/drone.h"
+#include "platform/ns3/radio_environment.h"
 
 using namespace ns3;
 
 namespace {
-
-Ptr<Packet> MakeTextPacket(const std::string& s) {
-	return Create<Packet>(reinterpret_cast<const uint8_t*>(s.data()), static_cast<uint32_t>(s.size()));
-}
 
 void MoveNode(uint32_t id, Ptr<ConstantPositionMobilityModel> mob, Vector pos) {
 	if (!mob) {
@@ -29,25 +26,20 @@ void MoveNode(uint32_t id, Ptr<ConstantPositionMobilityModel> mob, Vector pos) {
 	std::cout << "[Mobility] node " << id << " moved to (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
 }
 
-void DroneBroadcast(uint32_t id, Drone* drone, uint32_t seq) {
-	if (!drone) {
-		return;
-	}
-	drone->SendBroadcast(MakeTextPacket("DRONE_BCAST id=" + std::to_string(id) + " seq=" + std::to_string(seq)));
-}
-
-void BaseUnicast(uint32_t droneId, BaseStation* base, Ipv4Address droneIp, uint32_t seq) {
+void RequestCommCheck(BaseStation* base, uint8_t drone_id) {
 	if (!base) {
 		return;
 	}
-	base->SendTo(droneIp, MakeTextPacket("BASE_UCAST to=" + std::to_string(droneId) + " seq=" + std::to_string(seq)));
+	base->RequestNodeInfo(drone_id);
+	std::cout << "[Test] base requested node info from drone " << int(drone_id) << std::endl;
 }
 
-void DroneUnicastToBase(uint32_t id, Drone* drone, Ipv4Address baseIp, uint32_t seq) {
-	if (!drone) {
+void TriggerFlood(BaseStation* base, uint16_t flood_id) {
+	if (!base) {
 		return;
 	}
-	drone->SendTo(baseIp, MakeTextPacket("DRONE_UCAST id=" + std::to_string(id) + " seq=" + std::to_string(seq)));
+	std::cout << "[Test] base starting flood " << flood_id << std::endl;
+	base->RequestFlood(flood_id);
 }
 
 }  // namespace
@@ -61,7 +53,7 @@ int main(int argc, char* argv[]) {
 	double moveTimeSeconds = 3.0;
 	double moveOutX = 80.0;
 	uint16_t port = 9999;
-	double simSeconds = 7.0;
+	double simSeconds = 9.0;
 
 	CommandLine cmd;
 	cmd.AddValue("nDrones", "Number of drones in the swarm", nDrones);
@@ -102,26 +94,26 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	// Start periodic traffic.
-	// - Each drone broadcasts to the swarm.
-	// - Base station unicasts to each drone.
+	// Register base station with drones and vice versa.
 	for (uint32_t i = 0; i < nDrones; ++i) {
-		for (uint32_t seq = 0; seq < 8; ++seq) {
-			Simulator::Schedule(Seconds(0.5 + 0.4 * seq), &DroneBroadcast, i + 1, drones[i].get(), seq);
-		}
+		drones[i]->SetBaseStation(0, base.Ip());
+		auto mob = nodes.Get(i + 1)->GetObject<ConstantPositionMobilityModel>();
+		base.RegisterDrone(static_cast<uint8_t>(i + 1), drones[i]->Ip(), mob);
 	}
 
-	for (uint32_t i = 0; i < nDrones; ++i) {
-		for (uint32_t seq = 0; seq < 6; ++seq) {
-			Simulator::Schedule(Seconds(1.0 + 0.6 * seq), &BaseUnicast, i + 1, &base, drones[i]->Ip(), seq);
-		}
+	// Start node ticks (used for base reachability probes).
+	base.Start();
+	for (const auto& drone : drones) {
+		drone->Start();
 	}
 
+	// Communication check: base queries drone positions using CommunicationManager.
 	for (uint32_t i = 0; i < nDrones; ++i) {
-		for (uint32_t seq = 0; seq < 6; ++seq) {
-			Simulator::Schedule(Seconds(1.3 + 0.6 * seq), &DroneUnicastToBase, i + 1, drones[i].get(), base.Ip(), seq);
-		}
+		Simulator::Schedule(Seconds(0.8 + 0.2 * i), &RequestCommCheck, &base, static_cast<uint8_t>(i + 1));
 	}
+
+	// Flooding before movement.
+	Simulator::Schedule(Seconds(1.2), &TriggerFlood, &base, 1);
 
 	// Move the last drone out of range to demonstrate coverage cutoff.
 	if (nDrones > 0) {
@@ -129,9 +121,37 @@ int main(int argc, char* argv[]) {
 		Simulator::Schedule(Seconds(moveTimeSeconds), &MoveNode, nDrones, mob, Vector(moveOutX, 0.0, 0.0));
 	}
 
+	// Flooding after movement to verify coverage change.
+	Simulator::Schedule(Seconds(moveTimeSeconds + 1.0), &TriggerFlood, &base, 2);
+
 	Simulator::Stop(Seconds(simSeconds));
 	Simulator::Run();
+
+	std::cout << "\n[Test] Final drone state" << std::endl;
+	std::cout << std::left
+	          << std::setw(6) << "ID"
+	          << std::setw(12) << "X"
+	          << std::setw(12) << "Y"
+	          << std::setw(12) << "Z"
+	          << std::setw(12) << "Hops" << std::endl;
+
+	for (uint32_t i = 0; i < nDrones; ++i) {
+		Ptr<ConstantPositionMobilityModel> mob = nodes.Get(i + 1)->GetObject<ConstantPositionMobilityModel>();
+		Vector pos{0.0, 0.0, 0.0};
+		if (mob) {
+			pos = mob->GetPosition();
+		}
+		const uint8_t hops = drones[i]->HopsFromBase();
+		std::string hopsText = (hops == UINT8_MAX) ? "N/A" : std::to_string(hops);
+
+		std::cout << std::left
+		          << std::setw(6) << (i + 1)
+		          << std::setw(12) << pos.x
+		          << std::setw(12) << pos.y
+		          << std::setw(12) << pos.z
+		          << std::setw(12) << hopsText
+		          << std::endl;
+	}
 	Simulator::Destroy();
 	return 0;
 }
-
