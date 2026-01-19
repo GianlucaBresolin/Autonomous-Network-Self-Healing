@@ -11,6 +11,7 @@ class Ns3Position : public PositionInterface {
         void retrieveCurrentPosition() override;
         std::vector<double> getCoordinates() const override;
         Vector3D distanceFrom(const PositionInterface* other) const override;
+        Vector3D distanceFromCoords(const std::vector<double>& other_coords) const override;
     private: 
         CustomMobility* mobility;
         double latitude;

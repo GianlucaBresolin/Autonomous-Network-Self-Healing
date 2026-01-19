@@ -79,7 +79,7 @@ void Controller::distributedPotentialFieldControlLoop(
         Vector3D F_tot = Vector3D{0.0f, 0.0f, 0.0f};
         for(const NeighborInfoInterface* neighbor: neighbors) {
             const uint8_t neighbor_hops = neighbor->getHopsToBaseStation();
-            Vector3D diff = current_position->distanceFrom(neighbor->getPosition());
+            Vector3D diff = current_position->distanceFromCoords(neighbor->getPosition());
             if (neighbor_hops < hops_from_base_station || neighbor_hops > hops_from_base_station) {
                 // Attractive force 
                 computeAttractiveForces(diff, F_tot);

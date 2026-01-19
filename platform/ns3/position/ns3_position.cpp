@@ -38,3 +38,12 @@ Vector3D Ns3Position::distanceFrom(const PositionInterface* other) const {
         other_coords[2] - my_coords[2]
     );
 }
+
+Vector3D Ns3Position::distanceFromCoords(const std::vector<double>& other_coords) const {
+    std::vector<double> my_coords = getCoordinates();
+    return Vector3D(
+        other_coords[0] - my_coords[0],
+        other_coords[1] - my_coords[1],
+        other_coords[2] - my_coords[2]
+    );
+}
