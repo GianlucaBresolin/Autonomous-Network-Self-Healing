@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "interfaces/communication_manager.h"
+#include "../../../interfaces/communication_manager.h"
 #include "ns3/socket.h"
 #include "ns3/ptr.h"
 
