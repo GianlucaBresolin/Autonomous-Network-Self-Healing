@@ -111,4 +111,14 @@ std::vector<::ns3::Ipv4Address> RadioEnvironment::AllIps() const {
   return out;
 }
 
+::ns3::Ptr<::ns3::Node> RadioEnvironment::FindNodeByIp(::ns3::Ipv4Address ip) const {
+  for (const auto& kv : m_endpoints) {
+    const auto& ep = kv.second;
+    if (ep.ip == ip) {
+      return ep.socket ? ep.socket->GetNode() : nullptr;
+    }
+  }
+  return nullptr;
+}
+
 }  // namespace sim

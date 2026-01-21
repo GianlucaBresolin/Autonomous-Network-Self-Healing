@@ -6,38 +6,31 @@
 #include <unordered_set>
 #include <vector>
 
-#include "interfaces/flooding_manager.h"
-#include "modules/flood/messages.h"
+#include "interfaces/flood_manager.h"
+#include "modules/flood/flood_messages.h"
 
-class Flooding : public FloodingManagerInterface {
+class FloodManager : public FloodManagerInterface {
     public:
-        Flooding(
+        FloodManager(
             uint8_t self_id,
             CommunicationManagerInterface& communication_manager,
             std::function<bool()> is_base_reachable = {}
         );
 
-        // Everyone calls this on RX
         void onPacketReceived(const ::Packet& pkt) override;
 
-        void SetBaseId(uint8_t base_id);
-
-        // Returns a list of (node_id, hop_to_base) entries, where hop_to_base is
-        // defined as hop_to_initiator + 1.
-        // (Only meaningful on the initiator node for the given flood)
-        std::vector<std::pair<uint8_t, uint8_t>> getHopTableToBase(uint16_t flood_id) const override;
+        void setBaseId(uint8_t base_id);
 
         // Returns the number of hops from this node to the base station.
         uint8_t getHopsFromBase() const override;
 
     private:
+        uint8_t base_id = 0;
         uint8_t self_id;
         CommunicationManagerInterface& communication_manager;
         std::function<bool()> is_base_reachable;
-        uint8_t base_id = 0;
 
-        std::unordered_map<uint16_t, uint8_t> best_hop_to_initiator;
-        std::unordered_map<uint16_t, std::unordered_map<uint8_t, uint8_t>> hop_table_to_initiator;
+        std::unordered_map<uint16_t, uint8_t> best_hop_to_base;
 
         // For multi-hop reporting: track the best hop_to_initiator we've seen per reporter
         // so we forward each reporter's report at most once per improvement.
@@ -51,7 +44,8 @@ class Flooding : public FloodingManagerInterface {
         void handleDiscovery(const FloodDiscoveryMsg& msg);
         void handleReport(const FloodReportMsg& msg);
 
-        void SendBaseProbe(uint16_t flood_id, uint8_t initiator_id);
+        ::Packet createReportMsg(uint16_t flood_id, uint8_t initiator_id, uint8_t candidate_hop);
+        ::Packet createDiscoveryMsg(uint16_t flood_id, uint8_t initiator_id, uint8_t hop_to_base);
 
         static bool decodeStart(const ::Packet& pkt, FloodStartMsg& msg);
         static bool decodeDiscovery(const ::Packet& pkt, FloodDiscoveryMsg& msg);

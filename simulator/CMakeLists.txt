@@ -5,32 +5,46 @@ project(swarm_simulator LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(swarm_sim
-	apps/main.cpp
-	modules/core/base_station.cpp
+add_executable(swarm_demo_sim1
+	apps/help_proxy_sim.cpp
+	platform/ns3/base_station/ns3_base_station.cpp
+	modules/controller/controller.cpp
+	modules/communication/communication_manager.cpp
 	modules/dispatch/dispatch_manager.cpp
-	modules/core/drone.cpp
-	modules/flood/flood.cpp
+	platform/ns3/drone/ns3_drone.cpp
+	modules/flood/flood_manager.cpp
+	modules/neighbor/neighbor_manager.cpp
+	modules/neighbor/neighbor_info.cpp
+	platform/ns3/custom_mobility/custom_mobility.cpp
+	platform/ns3/position/ns3_position.cpp
+	platform/ns3/velocity_actuator/ns3_velocity_actuator.cpp
+	platform/ns3/transport/ns3_socket_transport.cpp
 	platform/ns3/radio_environment.cpp
-	platform/ns3/communication_manager.cpp
 )
 
-add_executable(swarm_sim_test
-	apps/test_simulation.cpp
-	modules/core/base_station.cpp
+add_executable(swarm_demo_sim2
+	apps/help_proxy_sim2.cpp
+	platform/ns3/base_station/ns3_base_station.cpp
+	modules/controller/controller.cpp
+	modules/communication/communication_manager.cpp
 	modules/dispatch/dispatch_manager.cpp
-	modules/core/drone.cpp
-	modules/flood/flood.cpp
+	platform/ns3/drone/ns3_drone.cpp
+	modules/flood/flood_manager.cpp
+	modules/neighbor/neighbor_manager.cpp
+	modules/neighbor/neighbor_info.cpp
+	platform/ns3/custom_mobility/custom_mobility.cpp
+	platform/ns3/position/ns3_position.cpp
+	platform/ns3/velocity_actuator/ns3_velocity_actuator.cpp
+	platform/ns3/transport/ns3_socket_transport.cpp
 	platform/ns3/radio_environment.cpp
-	platform/ns3/communication_manager.cpp
 )
 
-target_include_directories(swarm_sim PRIVATE
+target_include_directories(swarm_demo_sim1 PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
-target_include_directories(swarm_sim_test PRIVATE
+target_include_directories(swarm_demo_sim2 PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/..
 )
@@ -40,35 +54,35 @@ find_package(ns3 CONFIG QUIET)
 
 if(ns3_FOUND)
 	message(STATUS "Found ns-3 via CMake package")
-	target_link_libraries(swarm_sim PRIVATE
-		ns3::core
-		ns3::network
-		ns3::internet
-		ns3::wifi
-		ns3::mobility
-		ns3::propagation
-		ns3::traffic-control
-	)
-	target_link_libraries(swarm_sim_test PRIVATE
-		ns3::core
-		ns3::network
-		ns3::internet
-		ns3::wifi
-		ns3::mobility
-		ns3::propagation
-		ns3::traffic-control
-	)
+		target_link_libraries(swarm_demo_sim1 PRIVATE
+			ns3::core
+			ns3::network
+			ns3::internet
+			ns3::wifi
+			ns3::mobility
+			ns3::propagation
+			ns3::traffic-control
+		)
+		target_link_libraries(swarm_demo_sim2 PRIVATE
+			ns3::core
+			ns3::network
+			ns3::internet
+			ns3::wifi
+			ns3::mobility
+			ns3::propagation
+			ns3::traffic-control
+		)
 else()
 	message(STATUS "ns-3 CMake package not found; trying pkg-config")
 	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(NS3DEV QUIET IMPORTED_TARGET ns3-dev)
 	if(NS3DEV_FOUND)
-		target_link_libraries(swarm_sim PRIVATE PkgConfig::NS3DEV)
-		target_link_libraries(swarm_sim_test PRIVATE PkgConfig::NS3DEV)
+		target_link_libraries(swarm_demo_sim1 PRIVATE PkgConfig::NS3DEV)
+		target_link_libraries(swarm_demo_sim2 PRIVATE PkgConfig::NS3DEV)
 	else()
 		pkg_check_modules(NS3 REQUIRED IMPORTED_TARGET ns3)
-		target_link_libraries(swarm_sim PRIVATE PkgConfig::NS3)
-		target_link_libraries(swarm_sim_test PRIVATE PkgConfig::NS3)
+		target_link_libraries(swarm_demo_sim1 PRIVATE PkgConfig::NS3)
+		target_link_libraries(swarm_demo_sim2 PRIVATE PkgConfig::NS3)
 	endif()
 endif()
 

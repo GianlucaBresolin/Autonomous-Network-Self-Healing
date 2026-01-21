@@ -1,60 +1,38 @@
 #include "modules/dispatch/dispatch_manager.h"
-#include "modules/neighbor/neighbor_info.h"
 
-void DispatchManager::SetFloodingManager(FloodingManagerInterface* flooding_manager) {
-    m_flooding_manager = flooding_manager;
+void DispatchManager::setFloodManager(FloodManagerInterface* flood_manager) {
+  m_flood_manager = flood_manager;
 }
 
-void DispatchManager::SetNeighborManager(NeighborManagerInterface* neighbor_manager) {
-    m_neighbor_manager = neighbor_manager;
+void DispatchManager::setNeighborManager(NeighborManagerInterface* neighbor_manager) {
+  m_neighbor_manager = neighbor_manager;
 }
 
-void DispatchManager::SetFallbackHandler(FallbackHandler handler) {
-    m_fallback_handler = std::move(handler);
+void DispatchManager::setFallbackHandler(FallbackHandler handler) {
+  m_fallback_handler = std::move(handler);
 }
 
-void DispatchManager::HandlePacket(const ::Packet& pkt) const {
-    if (pkt.payload.empty()) {
-        return;
-    }
+void DispatchManager::handlePacket(const ::Packet& pkt) const {
+  switch (pkt.type) {
+    case ::PacketType::FLOOD:
+      if (m_flood_manager) {
+        m_flood_manager->onPacketReceived(pkt);
+      }
+      return;
 
-    if (IsFloodingPacket(pkt)) {
-        if (m_flooding_manager) {
-            m_flooding_manager->onPacketReceived(pkt);
-        }
-        return;
-    }
+    case ::PacketType::NEIGHBOR:
+      if (m_neighbor_manager) {
+        m_neighbor_manager->onPacketReceived(pkt);
+      }
+      return;
 
-    if (IsNeighborPacket(pkt)) {
-        if (m_neighbor_manager) {
-            m_neighbor_manager->onPacketReceived(pkt);
-        }
-        return;
-    }    
+    case ::PacketType::CORE:
+    case ::PacketType::UNKNOWN:
+    default:
+      break;
+  }
 
-    if (m_fallback_handler) {
-        m_fallback_handler(pkt);
-    }
-}
-
-bool DispatchManager::IsFloodingPacket(const ::Packet& pkt) {
-    if (pkt.payload.empty()) {
-        return false;
-    }
-
-    const uint8_t type = pkt.payload[0];
-    return type == static_cast<uint8_t>(FloodMsgType::START)
-        || type == static_cast<uint8_t>(FloodMsgType::DISCOVERY)
-        || type == static_cast<uint8_t>(FloodMsgType::REPORT)
-        || type == static_cast<uint8_t>(FloodMsgType::HOP_ENTRY)
-        || type == static_cast<uint8_t>(FloodMsgType::BASE_PROBE);
-}
-
-bool DispatchManager::IsNeighborPacket(const ::Packet& pkt) {
-    if (pkt.payload.empty()) {
-        return false;
-    }
-
-    const uint8_t type = pkt.payload[0];
-    return type == static_cast<uint8_t>(NeighborMsgType::NEIGHBOR_INFO);
+  if (m_fallback_handler) {
+    m_fallback_handler(pkt);
+  }
 }

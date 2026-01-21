@@ -40,6 +40,9 @@ class RadioEnvironment {
   ::ns3::Ipv4Address BroadcastAddress() const { return m_broadcast; }
   std::vector<::ns3::Ipv4Address> AllIps() const;
 
+  // Best-effort lookup of a node by its assigned IP (returns nullptr if unknown).
+  ::ns3::Ptr<::ns3::Node> FindNodeByIp(::ns3::Ipv4Address ip) const;
+
  private:
   RadioEnvironment();
   void InitIfNeeded();
