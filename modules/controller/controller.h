@@ -1,16 +1,15 @@
 #pragma once
 #include <cstdint>
-#include <atomic>
-#include <vector>
 #include <cmath>
-#include <thread>
-#include <memory>
-#include "../../common/vector3D.h"
-#include "../../interfaces/flooding_manager.h"
-#include "../../interfaces/velocity_actuator.h"
-#include "../../interfaces/position.h"
-#include "../../interfaces/neighbor_manager.h"
-#include "../../interfaces/neighbor_info.h"
+#include <vector>
+
+#include "common/vector3D.h"
+
+#include "interfaces/flood_manager.h"
+#include "interfaces/velocity_actuator.h"
+#include "interfaces/position.h"
+#include "interfaces/neighbor_manager.h"
+#include "interfaces/neighbor_info.h"
 
 const float DEFAULT_K_ATT = 1;
 const float DEFAULT_K_REP = 1;
@@ -26,14 +25,17 @@ class Controller {
             float D_safe,
             float V_max
         );
-        ~Controller();
-        void startControlLoop(
-            FloodingManagerInterface* flooding_manager,
+
+        void setMissionActive(bool active);
+        bool isMissionActive() const;
+
+        void setIdleVelocity(const Vector3D& velocity);
+        void step(
+            FloodManagerInterface* flooding_manager,
             VelocityActuatorInterface* velocity_actuator,
-            NeighborManagerInterface* neighbor_manager, 
-            PositionInterface* initial_position
+            NeighborManagerInterface* neighbor_manager,
+            PositionInterface* position
         );
-        void stopControlLoop();
 
     private:
         const uint8_t self_id;
@@ -41,16 +43,10 @@ class Controller {
         const float K_rep;
         const float D_safe;
         const float V_max;     
-        std::atomic<bool> mission_active{false}; 
-        std::vector<NeighborInfoInterface*> neighbors;
-        PositionInterface* current_position;
+        bool mission_active = false;
+        Vector3D idle_velocity{0.5f, 0.0f, 0.0f};
         
         void computeAttractiveForces(const Vector3D& diff, Vector3D& force);
         void computeRepulsiveForces(const Vector3D& diff, Vector3D& force);
         void computeVelocityCommand(const Vector3D& force, const float V_max, Vector3D* new_velocity);
-        void distributedPotentialFieldControlLoop(
-            FloodingManagerInterface* flooding_manager,
-            VelocityActuatorInterface* velocity_actuator,
-            NeighborManagerInterface* neighbor_manager
-    );
 };

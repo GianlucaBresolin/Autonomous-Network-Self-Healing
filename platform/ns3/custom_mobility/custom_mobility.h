@@ -1,9 +1,8 @@
 #pragma once
-#include <chrono>
 #include <vector>
 #include "ns3/core-module.h"
 #include "ns3/mobility-module.h"
-#include "../../../common/vector3D.h"
+#include "common/vector3D.h"
 
 class CustomMobility {
     public:
@@ -15,6 +14,6 @@ class CustomMobility {
     private:
         ns3::Ptr<ns3::MobilityModel> mobility;
         ns3::Vector previous_position;
-        std::chrono::steady_clock::time_point previous_time;
+        double previous_time_s = 0.0;
         Vector3D velocity;
-}
+    };

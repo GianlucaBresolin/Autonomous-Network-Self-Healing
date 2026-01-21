@@ -1,4 +1,4 @@
-#include "controller.h"
+#include "modules/controller/controller.h"
 
 Controller::Controller(
     uint8_t self_id,
@@ -14,30 +14,16 @@ Controller::Controller(
     V_max(V_max > 0.0 ? V_max : DEFAULT_V_MAX)
 { }
 
-Controller::~Controller() {
-    stopControlLoop();
+void Controller::setMissionActive(bool active) {
+    mission_active = active;
 }
 
-void Controller::startControlLoop(
-    FloodingManagerInterface* flooding_manager,
-    VelocityActuatorInterface* velocity_actuator, 
-    NeighborManagerInterface* neighbor_manager,
-    PositionInterface* initial_position
-) {
-    current_position = initial_position;
-    mission_active.store(true);
-    std::thread loop_thread(
-        &Controller::distributedPotentialFieldControlLoop, 
-        this, 
-        flooding_manager, 
-        velocity_actuator, 
-        neighbor_manager
-    );
-    loop_thread.detach();
+bool Controller::isMissionActive() const {
+    return mission_active;
 }
 
-void Controller::stopControlLoop() {
-    mission_active.store(false);
+void Controller::setIdleVelocity(const Vector3D& velocity) {
+    idle_velocity = velocity;
 }
 
 void Controller::computeAttractiveForces(const Vector3D& diff, Vector3D& force) {
@@ -66,40 +52,64 @@ void Controller::computeVelocityCommand(const Vector3D& force, const float V_max
     *new_velocity = force;
 }
 
-void Controller::distributedPotentialFieldControlLoop(
-    FloodingManagerInterface* flooding_manager,
+void Controller::step(
+    FloodManagerInterface* flooding_manager,
     VelocityActuatorInterface* velocity_actuator,
-    NeighborManagerInterface* neighbor_manager
+    NeighborManagerInterface* neighbor_manager,
+    PositionInterface* position
 ) {
-    while(mission_active.load()) {
-        neighbors = neighbor_manager->getNeighbors();
-        current_position->retrieveCurrentPosition();
-        uint8_t hops_from_base_station = flooding_manager->getHopsFromBase();
-
-        Vector3D F_tot = Vector3D{0.0f, 0.0f, 0.0f};
-        for(const NeighborInfoInterface* neighbor: neighbors) {
-            const uint8_t neighbor_hops = neighbor->getHopsToBaseStation();
-            Vector3D diff = current_position->distanceFromCoords(neighbor->getPosition());
-            if (neighbor_hops < hops_from_base_station || neighbor_hops > hops_from_base_station) {
-                // Attractive force 
-                computeAttractiveForces(diff, F_tot);
-            }
-            if (diff.module() < D_safe) {
-                // Repulsive force
-                computeRepulsiveForces(diff, F_tot);
-            }
-        }
-
-        // Velocity Command
-        Vector3D new_velocity(0.0, 0.0, 0.0);
-        computeVelocityCommand(F_tot, V_max, &new_velocity);
-        velocity_actuator->applyVelocity(new_velocity);
-
-        // Broadcast to neighbors
-        neighbor_manager->sendToNeighbors(
-            self_id, 
-            current_position,
-            hops_from_base_station
-        );
+    if (!velocity_actuator) {
+        return;
     }
+    if (!mission_active) {
+        Vector3D v = idle_velocity;
+        if (v.module() > V_max && v.module() > 0.0) {
+            v = V_max * v.unit_vector();
+        }
+        velocity_actuator->applyVelocity(v);
+
+        // Still broadcast our neighbor info while idling.
+        if (neighbor_manager && flooding_manager && position) {
+            position->retrieveCurrentPosition();
+            neighbor_manager->sendToNeighbors(
+                self_id,
+                position,
+                flooding_manager->getHopsFromBase()
+            );
+        }
+        return;
+    }
+    if (!flooding_manager || !neighbor_manager || !position) {
+        return;
+    }
+
+    const auto neighbors = neighbor_manager->getNeighbors();
+    position->retrieveCurrentPosition();
+    const uint8_t hops_from_base_station = flooding_manager->getHopsFromBase();
+
+    Vector3D F_tot = Vector3D{0.0f, 0.0f, 0.0f};
+    for (const NeighborInfoInterface* neighbor : neighbors) {
+        const uint8_t neighbor_hops = neighbor->getHopsToBaseStation();
+        Vector3D diff = position->distanceFromCoords(neighbor->getPosition());
+        if (neighbor_hops < hops_from_base_station || neighbor_hops > hops_from_base_station) {
+            // Attractive force
+            computeAttractiveForces(diff, F_tot);
+        }
+        if (diff.module() < D_safe) {
+            // Repulsive force
+            computeRepulsiveForces(diff, F_tot);
+        }
+    }
+
+    // Velocity Command
+    Vector3D new_velocity(0.0, 0.0, 0.0);
+    computeVelocityCommand(F_tot, V_max, &new_velocity);
+    velocity_actuator->applyVelocity(new_velocity);
+
+    // Broadcast to neighbors
+    neighbor_manager->sendToNeighbors(
+        self_id,
+        position,
+        hops_from_base_station
+    );
 }

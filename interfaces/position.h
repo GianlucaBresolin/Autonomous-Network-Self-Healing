@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
-#include "../../common/vector3D.h"
+
+#include "common/vector3D.h"
 
 class PositionInterface {
     public:

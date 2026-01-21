@@ -1,39 +1,52 @@
-#include "custom_mobility.h"
+#include "platform/ns3/custom_mobility/custom_mobility.h"
 
 CustomMobility::CustomMobility(
     ns3::Ptr<ns3::GeocentricConstantPositionMobilityModel> mobility
 ) : 
-    mobility(mobility)
-    velocity(0, 0, 0) // init as a stationary object
-{ }
+    mobility(mobility),
+    previous_position(0.0, 0.0, 0.0),
+    previous_time_s(ns3::Simulator::Now().GetSeconds()),
+    velocity(0.0, 0.0, 0.0) // init as a stationary object
+{
+    if (this->mobility) {
+        previous_position = this->mobility->GetPosition();
+    }
+}
 
 void CustomMobility::setPosition(
     double longitude,
     double latitude, 
     double altitude
 ) { 
-    mobility->SetGeographicPosition(
-        latitude, 
-        longitude, 
-        altitude,
-        ns3::GeographicPosition::WGS84
-    );
-    previous_time = std::chrono::steady_clock::now();
+    if (!mobility) {
+        return;
+    }
+
+    // Treat (longitude, latitude, altitude) as a generic (x, y, z) coordinate.
+    mobility->SetPosition(ns3::Vector(longitude, latitude, altitude));
+    previous_position = mobility->GetPosition();
+    previous_time_s = ns3::Simulator::Now().GetSeconds();
 }
 
 std::vector<double> CustomMobility::getPosition() {
-    std::chrono::steady_clock::time_point current_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> time_diff = current_time - previous_time;
+    if (!mobility) {
+        return {0.0, 0.0, 0.0};
+    }
 
-    // update position based on velocity and time elapsed:
-    double new_longitude = previous_position.x + velocity.x * time_diff.count(); 
-    double new_latitude = previous_position.y + velocity.y * time_diff.count();  
-    double new_altitude = previous_position.z + velocity.z * time_diff.count(); 
+    const double now_s = ns3::Simulator::Now().GetSeconds();
+    const double dt_s = now_s - previous_time_s;
+    if (dt_s <= 0.0) {
+        // No simulation time advanced since last update.
+        return {previous_position.x, previous_position.y, previous_position.z};
+    }
 
-    previous_time = current_time;
-    mobility->SetPosition(
-        ns3::Vector(new_longitude, new_latitude, new_altitude)
-    );
+    // Update position based on velocity and time elapsed:
+    const double new_longitude = previous_position.x + velocity.x * dt_s;
+    const double new_latitude = previous_position.y + velocity.y * dt_s;
+    const double new_altitude = previous_position.z + velocity.z * dt_s;
+
+    previous_time_s = now_s;
+    mobility->SetPosition(ns3::Vector(new_longitude, new_latitude, new_altitude));
     previous_position = mobility->GetPosition();
     return {
         previous_position.x, 

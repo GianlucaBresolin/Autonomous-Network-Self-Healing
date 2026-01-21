@@ -36,7 +36,7 @@ WORKDIR /project
 
 COPY . /project
 
-RUN cmake -S /project/simulator -B /project/build-docker -DCMAKE_PREFIX_PATH=/opt/ns3 && \
+RUN cmake -S /project -B /project/build-docker -DCMAKE_PREFIX_PATH=/opt/ns3 && \
     cmake --build /project/build-docker -j
 
-ENTRYPOINT ["/project/build-docker/swarm_sim"]
+ENTRYPOINT ["/project/build-docker/swarm_demo_sim1"]

@@ -1,9 +1,8 @@
 #pragma once
 #include <vector>
-#include "../../../interfaces/position.h"
-#include "../custom_mobility/custom_mobility.h"
+#include "interfaces/position.h"
+#include "platform/ns3/custom_mobility/custom_mobility.h"
 #include "ns3/core-module.h"
-#include "ns3/geographic-positions.h"
 
 class Ns3Position : public PositionInterface {
     public: 
@@ -14,7 +13,7 @@ class Ns3Position : public PositionInterface {
         Vector3D distanceFromCoords(const std::vector<double>& other_coords) const override;
     private: 
         CustomMobility* mobility;
-        double latitude;
-        double longitude;
-        double altitude;
+        double latitude = 0.0;
+        double longitude = 0.0;
+        double altitude = 0.0;
 };

@@ -1,7 +1,10 @@
 #pragma once
+#include <cstdint>
 #include <vector> 
-#include "neighbor_info.h"
-#include "communication_manager.h"
+
+#include "interfaces/neighbor_info.h"
+#include "interfaces/communication_manager.h"
+#include "interfaces/position.h"
 
 class NeighborManagerInterface {
     public:

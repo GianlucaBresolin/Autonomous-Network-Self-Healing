@@ -1,4 +1,4 @@
-#include "ns3_velocity_actuator.h"
+#include "platform/ns3/velocity_actuator/ns3_velocity_actuator.h"
 
 Ns3VelocityActuator::Ns3VelocityActuator(
     CustomMobility* mobility
@@ -9,5 +9,8 @@ Ns3VelocityActuator::Ns3VelocityActuator(
 void Ns3VelocityActuator::applyVelocity(
     const Vector3D velocity
 ) {
-    mobility->setVelocity(velocity)
+    if (!mobility) {
+        return;
+    }
+    mobility->setVelocity(velocity);
 }

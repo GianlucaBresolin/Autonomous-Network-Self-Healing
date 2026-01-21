@@ -1,73 +1,55 @@
-cmake_minimum_required(VERSION 3.10)
-project(swarm_project)
+cmake_minimum_required(VERSION 3.16)
+project(swarm_simulator LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+# ns-3 (3.46+) headers use C++20 library features (e.g. remove_cvref_t).
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Flooding module
-add_library(flooding
-    modules/flooding/flood.cpp
+add_executable(swarm_demo_sim1
+	apps/help_proxy_sim.cpp
+	platform/ns3/base_station/ns3_base_station.cpp
+	modules/controller/controller.cpp
+	modules/communication/communication_manager.cpp
+	modules/dispatch/dispatch_manager.cpp
+	platform/ns3/drone/ns3_drone.cpp
+	modules/flood/flood_manager.cpp
+	modules/neighbor/neighbor_manager.cpp
+	modules/neighbor/neighbor_info.cpp
+	platform/ns3/custom_mobility/custom_mobility.cpp
+	platform/ns3/position/ns3_position.cpp
+	platform/ns3/velocity_actuator/ns3_velocity_actuator.cpp
+	platform/ns3/transport/ns3_socket_transport.cpp
+	platform/ns3/radio_environment/radio_environment.cpp
 )
 
-target_include_directories(flooding PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
+target_include_directories(swarm_demo_sim1 PRIVATE
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
-# Controller module
-add_library(controller
-    modules/controller/controller.cpp
-)
+# Prefer ns-3 CMake package config (works with modern ns-3 installs).
+find_package(ns3 CONFIG QUIET)
 
-target_include_directories(controller PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# Position module
-add_library(position
-    modules/position/position.cpp
-)
-
-target_include_directories(position PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# Fake communication manager (test utility)
-add_library(fake_communication_manager
-    tests/fake_communication_manager.cpp
-)
-
-target_include_directories(fake_communication_manager PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# Flooding app
-add_executable(flooding_app
-    apps/flooding/main.cpp
-)
-
-target_link_libraries(flooding_app
-    flooding
-    fake_communication_manager
-)
-
-# Optional formatting helper
-find_program(CLANG_FORMAT NAMES clang-format)
-
-if(CLANG_FORMAT)
-    file(GLOB_RECURSE FORMAT_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/**/*.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/**/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/**/*.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/**/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/interfaces/**/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/**/*.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/**/*.h
-    )
-
-    add_custom_target(format
-        COMMAND ${CLANG_FORMAT} -i ${FORMAT_SOURCES}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Running clang-format on sources")
+if(ns3_FOUND)
+	message(STATUS "Found ns-3 via CMake package")
+		target_link_libraries(swarm_demo_sim1 PRIVATE
+			ns3::core
+			ns3::network
+			ns3::internet
+			ns3::wifi
+			ns3::mobility
+			ns3::propagation
+			ns3::traffic-control
+		)
 else()
-    message(STATUS "clang-format not found: 'format' target disabled")
+	message(STATUS "ns-3 CMake package not found; trying pkg-config")
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(NS3DEV QUIET IMPORTED_TARGET ns3-dev)
+	if(NS3DEV_FOUND)
+		target_link_libraries(swarm_demo_sim1 PRIVATE PkgConfig::NS3DEV)
+	else()
+		pkg_check_modules(NS3 REQUIRED IMPORTED_TARGET ns3)
+		target_link_libraries(swarm_demo_sim1 PRIVATE PkgConfig::NS3)
+	endif()
 endif()
+
