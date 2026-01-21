@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
   double maxRangeMeters = 50.0;
   uint16_t port = 9999;
-  double simSeconds = 30.0;
+  double simSeconds = 60.0;
 
   CommandLine cmd;
   cmd.AddValue("maxRangeMeters", "Radio max range cutoff (coverage)", maxRangeMeters);
@@ -58,9 +58,9 @@ int main(int argc, char* argv[]) {
   // Keep it within range of at least one other drone (drone 4) so the HELP_PROXY can be received,
   // while keeping it far enough from the base (>= 50m) that it doesn't re-enter immediately.
   EnsureMobility(nodes.Get(0), Vector(0.0, 0.0, 0.0));
-  EnsureMobility(nodes.Get(1), Vector(10.0, 0.0, 0.0));
-  EnsureMobility(nodes.Get(2), Vector(20.0, 0.0, 0.0));
-  EnsureMobility(nodes.Get(3), Vector(50.0, 0.0, 0.0));
+  EnsureMobility(nodes.Get(1), Vector(15.0, 0.0, 0.0));
+  EnsureMobility(nodes.Get(2), Vector(25.0, 0.0, 0.0));
+  EnsureMobility(nodes.Get(3), Vector(35.0, 0.0, 0.0));
   EnsureMobility(nodes.Get(4), Vector(45.0, 0.0, 0.0));
 
   Ns3BaseStation base(0, nodes.Get(0));

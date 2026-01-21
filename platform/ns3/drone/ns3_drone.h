@@ -85,7 +85,7 @@ class Ns3Drone {
   double m_last_help_proxy_rx_s = -1.0;
   double m_mission_start_s = -1.0;
   double m_last_mission_log_s = -1.0;
-  double m_mission_log_window_s = 6.0;
+  double m_mission_log_window_s = 60.0;
   double m_mission_log_dt_s = 0.5;
 
   double m_last_idle_log_s = -1.0;
