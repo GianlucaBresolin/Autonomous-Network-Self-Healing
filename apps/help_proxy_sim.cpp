@@ -6,6 +6,7 @@
 #include "ns3/core-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/network-module.h"
+#include "ns3/netanim-module.h"
 
 #include "platform/ns3/base_station/ns3_base_station.h"
 #include "platform/ns3/drone/ns3_drone.h"
@@ -16,9 +17,9 @@ using namespace ns3;
 namespace {
 
 void EnsureMobility(Ptr<Node> node, const Vector& pos) {
-  auto mob = node->GetObject<GeocentricConstantPositionMobilityModel>();
+  auto mob = node->GetObject<ConstantPositionMobilityModel>();
   if (!mob) {
-    mob = CreateObject<GeocentricConstantPositionMobilityModel>();
+    mob = CreateObject<ConstantPositionMobilityModel>();
     node->AggregateObject(mob);
   }
   mob->SetPosition(pos);
@@ -38,7 +39,7 @@ int main(int argc, char* argv[]) {
 
   double maxRangeMeters = 50.0;
   uint16_t port = 9999;
-  double simSeconds = 60.0;
+  double simSeconds = 30.0;
 
   CommandLine cmd;
   cmd.AddValue("maxRangeMeters", "Radio max range cutoff (coverage)", maxRangeMeters);
@@ -60,7 +61,7 @@ int main(int argc, char* argv[]) {
   EnsureMobility(nodes.Get(0), Vector(0.0, 0.0, 0.0));
   EnsureMobility(nodes.Get(1), Vector(15.0, 0.0, 0.0));
   EnsureMobility(nodes.Get(2), Vector(25.0, 0.0, 0.0));
-  EnsureMobility(nodes.Get(3), Vector(35.0, 0.0, 0.0));
+  EnsureMobility(nodes.Get(3), Vector(55.0, 0.0, 0.0));
   EnsureMobility(nodes.Get(4), Vector(45.0, 0.0, 0.0));
 
   Ns3BaseStation base(0, nodes.Get(0));
@@ -88,6 +89,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "[Sim] base coverage=" << maxRangeMeters << "m, drones=4, stop=" << simSeconds << "s" << std::endl;
 
+  AnimationInterface anim("/output/drone-simulation.xml");
   Simulator::Stop(Seconds(simSeconds));
   Simulator::Run();
   Simulator::Destroy();

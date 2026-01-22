@@ -40,6 +40,7 @@ if(ns3_FOUND)
 			ns3::mobility
 			ns3::propagation
 			ns3::traffic-control
+			ns3::netanim
 		)
 else()
 	message(STATUS "ns-3 CMake package not found; trying pkg-config")
