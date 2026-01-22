@@ -1,12 +1,12 @@
 #include "platform/ns3/custom_mobility/custom_mobility.h"
 
 CustomMobility::CustomMobility(
-    ns3::Ptr<ns3::GeocentricConstantPositionMobilityModel> mobility
+    ns3::Ptr<ns3::ConstantPositionMobilityModel> mobility
 ) : 
     mobility(mobility),
-    previous_position(0.0, 0.0, 0.0),
     previous_time_s(ns3::Simulator::Now().GetSeconds()),
-    velocity(0.0, 0.0, 0.0) // init as a stationary object
+    acceleration(0.0, 0.0, 0.0), // no initial acceleration
+    velocity(0.0, 0.0, 0.0)  // no initial velocity
 {
     if (this->mobility) {
         previous_position = this->mobility->GetPosition();
@@ -14,39 +14,68 @@ CustomMobility::CustomMobility(
 }
 
 void CustomMobility::setPosition(
-    double longitude,
-    double latitude, 
-    double altitude
+    const double x,
+    const double y, 
+    const double z
 ) { 
     if (!mobility) {
         return;
     }
 
-    // Treat (longitude, latitude, altitude) as a generic (x, y, z) coordinate.
-    mobility->SetPosition(ns3::Vector(longitude, latitude, altitude));
+    mobility->SetPosition(ns3::Vector(x, y, z));
     previous_position = mobility->GetPosition();
     previous_time_s = ns3::Simulator::Now().GetSeconds();
+}
+
+void CustomMobility::update(){
+    const double now_s = ns3::Simulator::Now().GetSeconds();
+    const double delta_t_s = now_s - previous_time_s;
+    
+    // update position and velocity based on:
+    // - previous position
+    // - previous velocity
+    // - current acceleration
+    // - time elapsed since last update
+    double new_x, new_y, new_z;
+    if (delta_t_s <= delta_t_max_velocity_s) {
+        // we do not have reached max velocity
+        // pos = pos0 + v_prev * delta_t + 0.5 * a * (delta_t)^2
+        new_x = previous_position.x + velocity.x * delta_t_s + 0.5 * acceleration.x * std::pow(delta_t_s, 2);
+        new_y = previous_position.y + velocity.y * delta_t_s + 0.5 * acceleration.y * std::pow(delta_t_s, 2);
+        new_z = previous_position.z + velocity.z * delta_t_s + 0.5 * acceleration.z * std::pow(delta_t_s, 2);
+
+        // update velocity: v = v0 + a * delta_t
+        velocity.x += acceleration.x * delta_t_s;
+        velocity.y += acceleration.y * delta_t_s;
+        velocity.z += acceleration.z * delta_t_s;
+    } else {
+        // we have reached max velocity
+        double delta_constant_velocity_s = delta_t_s - delta_t_max_velocity_s;
+        // pos = pos0 + v_prev * delta_t_max_velocity + 0.5 * a * (delta_t_max_velocity)^2 + v_max * delta_constant_velocity
+        new_x = previous_position.x + velocity.x * delta_t_max_velocity_s + 0.5 * acceleration.x * std::pow(delta_t_max_velocity_s, 2) + velocity.x * delta_constant_velocity_s;
+        new_y = previous_position.y + velocity.y * delta_t_max_velocity_s + 0.5 * acceleration.y * std::pow(delta_t_max_velocity_s, 2) + velocity.y * delta_constant_velocity_s;
+        new_z = previous_position.z + velocity.z * delta_t_max_velocity_s + 0.5 * acceleration.z * std::pow(delta_t_max_velocity_s, 2) + velocity.z * delta_constant_velocity_s;
+        
+        // update velocity: v = v0 + a * delta_t_max_velocity (its magnitude is
+        // max_velocity)
+        velocity.x += acceleration.x * delta_t_max_velocity_s;
+        velocity.y += acceleration.y * delta_t_max_velocity_s;
+        velocity.z += acceleration.z * delta_t_max_velocity_s;
+    }
+
+    previous_time_s = now_s;
+    mobility->SetPosition(ns3::Vector(new_x, new_y, new_z));
 }
 
 std::vector<double> CustomMobility::getPosition() {
     if (!mobility) {
         return {0.0, 0.0, 0.0};
     }
+    
+    // update position and velocity
+    update(); 
 
-    const double now_s = ns3::Simulator::Now().GetSeconds();
-    const double dt_s = now_s - previous_time_s;
-    if (dt_s <= 0.0) {
-        // No simulation time advanced since last update.
-        return {previous_position.x, previous_position.y, previous_position.z};
-    }
-
-    // Update position based on velocity and time elapsed:
-    const double new_longitude = previous_position.x + velocity.x * dt_s;
-    const double new_latitude = previous_position.y + velocity.y * dt_s;
-    const double new_altitude = previous_position.z + velocity.z * dt_s;
-
-    previous_time_s = now_s;
-    mobility->SetPosition(ns3::Vector(new_longitude, new_latitude, new_altitude));
+    // retrieve current position
     previous_position = mobility->GetPosition();
     return {
         previous_position.x, 
@@ -55,9 +84,17 @@ std::vector<double> CustomMobility::getPosition() {
     };
 }
 
-void CustomMobility::setVelocity(const Vector3D new_velocity) {
-    // update position before changing velocity
-    getPosition();
+void CustomMobility::updateVelocity(const Vector3D new_acceleration, const double max_velocity) {
+    // update position and velocity
+    update();
 
-    velocity = new_velocity;    
+    // set new acceleration 
+    acceleration = new_acceleration;
+
+    if (acceleration.module() != 1e-6) {
+        // set new delta_time_max_velocity_s = (max_velocity - current_velocity) / acceleration
+        delta_t_max_velocity_s = (max_velocity - velocity.module()) / acceleration.module();
+    } else {
+        delta_t_max_velocity_s = 0.0;
+    }
 }

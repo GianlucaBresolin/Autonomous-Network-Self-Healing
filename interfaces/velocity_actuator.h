@@ -5,5 +5,5 @@
 class VelocityActuatorInterface {
     public:
         virtual ~VelocityActuatorInterface() = default;
-        virtual void applyVelocity(const Vector3D velocity) = 0;
+        virtual void applyVelocity(const Vector3D acceleration, const double max_velocity) const = 0;
 };

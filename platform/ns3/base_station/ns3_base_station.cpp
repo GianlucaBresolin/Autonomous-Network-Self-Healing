@@ -1,18 +1,22 @@
 #include "platform/ns3/base_station/ns3_base_station.h"
 
-Ns3BaseStation::Ns3BaseStation(uint8_t id, ::ns3::Ptr<::ns3::Node> node)
-    : m_id(id),
-      m_node(node),
-      m_comm(std::make_unique<sim::Ns3SocketTransport>(node), id) {
+Ns3BaseStation::Ns3BaseStation(
+  uint8_t id, 
+  ::ns3::Ptr<::ns3::Node> node
+) : 
+  m_id(id),
+  m_node(node),
+  m_comm(std::make_unique<sim::Ns3SocketTransport>(node), id) 
+{
   if (!m_node) {
     return;
   }
 
   m_transport_ip = sim::RadioEnvironment::Get().Install(m_node).ip;
 
-  auto mobility = m_node->GetObject<::ns3::GeocentricConstantPositionMobilityModel>();
+  auto mobility = m_node->GetObject<::ns3::ConstantPositionMobilityModel>();
   if (!mobility) {
-    mobility = ::ns3::CreateObject<::ns3::GeocentricConstantPositionMobilityModel>();
+    mobility = ::ns3::CreateObject<::ns3::ConstantPositionMobilityModel>();
     m_node->AggregateObject(mobility);
   }
 

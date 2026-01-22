@@ -17,7 +17,7 @@
 #include "common/packet.h"
 
 #include "ns3/core-module.h"
-#include "ns3/geocentric-constant-position-mobility-model.h"
+#include "ns3/constant-position-mobility-model.h"
 #include "ns3/internet-module.h"
 
 #include "platform/ns3/custom_mobility/custom_mobility.h"
@@ -78,14 +78,14 @@ class Ns3Drone {
 
   Controller m_controller;
 
-  bool m_mission_active = false;
+  bool help_proxy_sent = false;
 
   // Debug logging for mission transitions / post-HELP_PROXY repositioning.
   double m_last_help_proxy_tx_s = -1.0;
   double m_last_help_proxy_rx_s = -1.0;
+
   double m_mission_start_s = -1.0;
   double m_last_mission_log_s = -1.0;
-  double m_mission_log_window_s = 60.0;
   double m_mission_log_dt_s = 0.5;
 
   double m_last_idle_log_s = -1.0;

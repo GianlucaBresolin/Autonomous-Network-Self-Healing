@@ -15,6 +15,7 @@ const float DEFAULT_K_ATT = 1;
 const float DEFAULT_K_REP = 1;
 const float DEFAULT_D_SAFE = 1;
 const float DEFAULT_V_MAX = 1;
+const float DEFAULT_DRONE_WEIGHT_KG = 2.5;
 
 class Controller {
     public:
@@ -23,7 +24,8 @@ class Controller {
             float K_att_value,
             float K_rep_value,
             float D_safe,
-            float V_max
+            float V_max, 
+            float drone_weight_kg = 2.5f
         );
 
         void setMissionActive(bool active);
@@ -43,10 +45,11 @@ class Controller {
         const float K_rep;
         const float D_safe;
         const float V_max;     
+        const float drone_weight_kg;
         bool mission_active = false;
         Vector3D idle_velocity{0.5f, 0.0f, 0.0f};
         
         void computeAttractiveForces(const Vector3D& diff, Vector3D& force);
         void computeRepulsiveForces(const Vector3D& diff, Vector3D& force);
-        void computeVelocityCommand(const Vector3D& force, const float V_max, Vector3D* new_velocity);
+        void computeVelocityCommand(const Vector3D& force, Vector3D* new_accelerations);
 };

@@ -7,9 +7,9 @@ Ns3Position::Ns3Position(
     if (mobility) {
         const std::vector<double> pos = mobility->getPosition();
         if (pos.size() >= 3) {
-            latitude = pos[0];
-            longitude = pos[1];
-            altitude = pos[2];
+            x = pos[0];
+            y = pos[1];
+            z = pos[2];
         }
     }
 }
@@ -20,14 +20,14 @@ void Ns3Position::retrieveCurrentPosition() {
     }
     const std::vector<double> pos = mobility->getPosition();
     if (pos.size() >= 3) {
-        latitude = pos[0];
-        longitude = pos[1];
-        altitude = pos[2];
+        x = pos[0];
+        y = pos[1];
+        z = pos[2];
     }
 }
 
 std::vector<double> Ns3Position::getCoordinates() const {
-    return {latitude, longitude, altitude};
+    return {x, y, z};
 }
 
 Vector3D Ns3Position::distanceFrom(const PositionInterface* other) const {

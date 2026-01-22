@@ -6,11 +6,9 @@ Ns3VelocityActuator::Ns3VelocityActuator(
     mobility(mobility)
 { }
 
-void Ns3VelocityActuator::applyVelocity(
-    const Vector3D velocity
-) {
+void Ns3VelocityActuator::applyVelocity(const Vector3D acceleration, const double max_velocity) const {
     if (!mobility) {
         return;
     }
-    mobility->setVelocity(velocity);
+    mobility->updateVelocity(acceleration, max_velocity);
 }

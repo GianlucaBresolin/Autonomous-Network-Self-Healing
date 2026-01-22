@@ -5,13 +5,15 @@ Controller::Controller(
     float K_att_value,
     float K_rep_value,
     float D_safe,
-    float V_max
+    float V_max, 
+    float drone_weight_kg
 ) :
     self_id(self_id),
     K_att(K_att_value > 0.0 ? K_att_value : DEFAULT_K_ATT),
     K_rep(K_rep_value > 0.0 ? K_rep_value : DEFAULT_K_REP),
     D_safe(D_safe > 0.0 ? D_safe : DEFAULT_D_SAFE),
-    V_max(V_max > 0.0 ? V_max : DEFAULT_V_MAX)
+    V_max(V_max > 0.0 ? V_max : DEFAULT_V_MAX), 
+    drone_weight_kg(drone_weight_kg > 0.0 ? drone_weight_kg : DEFAULT_DRONE_WEIGHT_KG)
 { }
 
 void Controller::setMissionActive(bool active) {
@@ -39,17 +41,10 @@ void Controller::computeRepulsiveForces(const Vector3D& diff, Vector3D& force) {
     force = force - (K_rep / std::pow(distance, 2)) * diff.unit_vector();
 }
 
-void Controller::computeVelocityCommand(const Vector3D& force, const float V_max, Vector3D* new_velocity) {
-    double force_magnitude = force.module();
-    if (force_magnitude == 0) {
-        *new_velocity = Vector3D{0.0, 0.0, 0.0};
-        return;
-    }
-    if (force_magnitude > V_max) {
-        *new_velocity = V_max * force.unit_vector();
-        return;
-    }
-    *new_velocity = force;
+void Controller::computeVelocityCommand(const Vector3D& force, Vector3D* new_acceleration) {
+    new_acceleration->x = force.x / drone_weight_kg;
+    new_acceleration->y = force.y / drone_weight_kg;
+    new_acceleration->z = force.z / drone_weight_kg;
 }
 
 void Controller::step(
@@ -61,27 +56,24 @@ void Controller::step(
     if (!velocity_actuator) {
         return;
     }
-    if (!mission_active) {
-        Vector3D v = idle_velocity;
-        if (v.module() > V_max && v.module() > 0.0) {
-            v = V_max * v.unit_vector();
-        }
-        velocity_actuator->applyVelocity(v);
-
-        // Still broadcast our neighbor info while idling.
-        if (neighbor_manager && flooding_manager && position) {
-            position->retrieveCurrentPosition();
-            neighbor_manager->sendToNeighbors(
-                self_id,
-                position,
-                flooding_manager->getHopsFromBase()
-            );
-        }
-        return;
-    }
     if (!flooding_manager || !neighbor_manager || !position) {
         return;
     }
+    if (!mission_active) {
+        // Mission inactive: idle behavior
+        Vector3D idle_acceleration{0.0, 0.0, 0.0};
+        velocity_actuator->applyVelocity(idle_acceleration, V_max);
+
+        // Still broadcast our neighbor info while idling.
+        position->retrieveCurrentPosition();
+        neighbor_manager->sendToNeighbors(
+            self_id,
+            position,
+            flooding_manager->getHopsFromBase()
+        );
+        return;
+    }
+    
 
     const auto neighbors = neighbor_manager->getNeighbors();
     position->retrieveCurrentPosition();
@@ -102,9 +94,9 @@ void Controller::step(
     }
 
     // Velocity Command
-    Vector3D new_velocity(0.0, 0.0, 0.0);
-    computeVelocityCommand(F_tot, V_max, &new_velocity);
-    velocity_actuator->applyVelocity(new_velocity);
+    Vector3D new_acceleration(0.0, 0.0, 0.0);
+    computeVelocityCommand(F_tot, &new_acceleration);
+    velocity_actuator->applyVelocity(new_acceleration, V_max);
 
     // Broadcast to neighbors
     neighbor_manager->sendToNeighbors(

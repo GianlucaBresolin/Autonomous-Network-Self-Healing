@@ -1,19 +1,23 @@
 #pragma once
 #include <vector>
 #include "ns3/core-module.h"
-#include "ns3/mobility-module.h"
+#include "ns3/constant-position-mobility-model.h"
 #include "common/vector3D.h"
 
 class CustomMobility {
     public:
-        CustomMobility(ns3::Ptr<ns3::GeocentricConstantPositionMobilityModel> mobility);
-        void setPosition(double longitude, double latitude, double altitude); 
+        CustomMobility(ns3::Ptr<ns3::ConstantPositionMobilityModel> mobility);
+        void setPosition(const double x, const double y, const double z); 
+        void update();
         std::vector<double> getPosition();
-        void setVelocity(const Vector3D new_velocity);
+        void updateVelocity(const Vector3D acceleration, const double max_velocity);
         
     private:
         ns3::Ptr<ns3::MobilityModel> mobility;
         ns3::Vector previous_position;
         double previous_time_s = 0.0;
+        double delta_t_max_velocity_s = 0.0;
+        double max_velocity;
+        Vector3D acceleration;
         Vector3D velocity;
     };

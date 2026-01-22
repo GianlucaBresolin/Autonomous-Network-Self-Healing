@@ -14,7 +14,7 @@
 #include "common/packet.h"
 
 #include "ns3/core-module.h"
-#include "ns3/geocentric-constant-position-mobility-model.h"
+#include "ns3/constant-position-mobility-model.h"
 #include "ns3/internet-module.h"
 
 #include "platform/ns3/custom_mobility/custom_mobility.h"

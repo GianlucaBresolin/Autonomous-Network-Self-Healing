@@ -1,19 +1,23 @@
 #include "platform/ns3/drone/ns3_drone.h"
 
-Ns3Drone::Ns3Drone(uint8_t id, ::ns3::Ptr<::ns3::Node> node)
-    : m_id(id),
-      m_node(node),
-      m_comm(std::make_unique<sim::Ns3SocketTransport>(node), id),
-      m_controller(id, DEFAULT_K_ATT, DEFAULT_K_REP, DEFAULT_D_SAFE, DEFAULT_V_MAX) {
+Ns3Drone::Ns3Drone(
+  uint8_t id, 
+  ::ns3::Ptr<::ns3::Node> node
+) : 
+  m_id(id),
+  m_node(node),
+  m_comm(std::make_unique<sim::Ns3SocketTransport>(node), id),
+  m_controller(id, DEFAULT_K_ATT, DEFAULT_K_REP, DEFAULT_D_SAFE, DEFAULT_V_MAX) 
+{
   if (!m_node) {
     return;
   }
 
   m_transport_ip = sim::RadioEnvironment::Get().Install(m_node).ip;
 
-  auto mobility = m_node->GetObject<::ns3::GeocentricConstantPositionMobilityModel>();
+  auto mobility = m_node->GetObject<::ns3::ConstantPositionMobilityModel>();
   if (!mobility) {
-    mobility = ::ns3::CreateObject<::ns3::GeocentricConstantPositionMobilityModel>();
+    mobility = ::ns3::CreateObject<::ns3::ConstantPositionMobilityModel>();
     m_node->AggregateObject(mobility);
   }
 
@@ -56,14 +60,10 @@ void Ns3Drone::start() {
 }
 
 void Ns3Drone::startMission() {
-  if (m_mission_active) {
-    return;
-  }
   if (!m_flood_manager || !m_velocity_actuator || !m_neighbor_manager || !m_position) {
     return;
   }
 
-  m_mission_active = true;
   m_controller.setMissionActive(true);
 
   m_mission_start_s = ::ns3::Simulator::Now().GetSeconds();
@@ -74,7 +74,6 @@ void Ns3Drone::startMission() {
 }
 
 void Ns3Drone::stopMission() {
-  m_mission_active = false;
   m_controller.setMissionActive(false);
 }
 
@@ -84,13 +83,13 @@ void Ns3Drone::onTick() {
   sendPositionUpdate();
 
   const double now_s = ::ns3::Simulator::Now().GetSeconds();
-  if (!m_mission_active && m_waiting_ack && (now_s - m_last_ack_rx_s) > m_ack_timeout_s) {
+  if (m_waiting_ack && (now_s - m_last_ack_rx_s) > m_ack_timeout_s && !help_proxy_sent) {
     sendHelpProxy();
     m_waiting_ack = false;
   }
 
-  // Post-mission debug: log how drones reposition for a short window after mission activation.
-  if (m_mission_active && m_mission_start_s >= 0.0 && (now_s - m_mission_start_s) <= m_mission_log_window_s) {
+  // Post-mission debug: log how drones reposition 
+  if (m_mission_start_s >= 0.0) {
     if (m_last_mission_log_s < 0.0 || (now_s - m_last_mission_log_s) >= m_mission_log_dt_s) {
       if (m_position) {
         m_position->retrieveCurrentPosition();
@@ -104,11 +103,11 @@ void Ns3Drone::onTick() {
                   << "," << (coords.size() > 1 ? coords[1] : 0.0)
                   << "," << (coords.size() > 2 ? coords[2] : 0.0) << ")";
 
-        if (m_last_help_proxy_rx_s >= 0.0 && (now_s - m_last_help_proxy_rx_s) <= m_mission_log_window_s) {
-          std::cout << " after_HELP_PROXY_rx(t=" << m_last_help_proxy_rx_s << "s)";
+        if (m_last_help_proxy_rx_s >= 0.0) {
+          std::cout << " after_HELP_PROXY_RX(t=" << m_last_help_proxy_rx_s << "s)";
         }
-        if (m_last_help_proxy_tx_s >= 0.0 && (now_s - m_last_help_proxy_tx_s) <= m_mission_log_window_s) {
-          std::cout << " after_HELP_PROXY_tx(t=" << m_last_help_proxy_tx_s << "s)";
+        if (m_last_help_proxy_tx_s >= 0.0) {
+          std::cout << " after_HELP_PROXY_TX(t=" << m_last_help_proxy_tx_s << "s)";
         }
         std::cout << std::endl;
       }
@@ -120,11 +119,16 @@ void Ns3Drone::onTick() {
   // - If mission is active: one potential-field iteration per tick.
   // - If mission is off: apply a default "idle" velocity so drones move and can leave coverage.
   if (m_flood_manager && m_velocity_actuator && m_neighbor_manager && m_position) {
-    m_controller.step(m_flood_manager.get(), m_velocity_actuator.get(), m_neighbor_manager.get(), m_position.get());
+    m_controller.step(
+      m_flood_manager.get(), 
+      m_velocity_actuator.get(), 
+      m_neighbor_manager.get(), 
+      m_position.get()
+    );
   }
 
   // Idle trace: confirm motion/coverage exit for debugging (only drone 4).
-  if (!m_mission_active && m_id == 4 && m_position) {
+  if (m_id == 4 && m_position) {
     if (m_last_idle_log_s < 0.0 || (now_s - m_last_idle_log_s) >= m_idle_log_dt_s) {
       m_position->retrieveCurrentPosition();
       const auto coords = m_position->getCoordinates();
@@ -177,8 +181,8 @@ void Ns3Drone::handleCorePacket(const ::Packet& pkt) {
       m_last_acked_seq = ack.seq;
       m_waiting_ack = false;
 
-      std::cout << "[ACK RX] t=" << m_last_ack_rx_s << "s drone=" << static_cast<int>(m_id)
-                << " seq=" << ack.seq << std::endl;
+      // std::cout << "[ACK RX] t=" << m_last_ack_rx_s << "s drone=" << static_cast<int>(m_id)
+      //           << " seq=" << ack.seq << std::endl;
 
       // Treat the base station as a regular neighbor entry.
       // We translate the ACK's embedded base info into the same payload format used
@@ -296,6 +300,8 @@ void Ns3Drone::sendHelpProxy() {
   std::memcpy(out.payload.data(), &help, sizeof(help));
 
   m_comm.send(out);
+
+  help_proxy_sent = true;
 
   // HELP_PROXY is the trigger to start the mission behavior.
   // startMission();

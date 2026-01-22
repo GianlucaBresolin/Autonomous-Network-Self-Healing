@@ -13,7 +13,7 @@ class Ns3Position : public PositionInterface {
         Vector3D distanceFromCoords(const std::vector<double>& other_coords) const override;
     private: 
         CustomMobility* mobility;
-        double latitude = 0.0;
-        double longitude = 0.0;
-        double altitude = 0.0;
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
 };
