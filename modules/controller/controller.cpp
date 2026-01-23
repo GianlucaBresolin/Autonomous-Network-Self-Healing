@@ -84,7 +84,6 @@ void Controller::step(
     for (const NeighborInfoInterface* neighbor : neighbors) {
         const uint8_t neighbor_hops = neighbor->getHopsToBaseStation();
         Vector3D diff = position->distanceFromCoords(neighbor->getPosition());
-        std::cout << diff.x << ", " << diff.y << ", " << diff.z << std::endl;
         if (neighbor_hops < hops_from_base_station || neighbor_hops > hops_from_base_station) {
             // Attractive force
             computeAttractiveForces(diff, F_tot);
@@ -94,7 +93,6 @@ void Controller::step(
             computeRepulsiveForces(diff, F_tot);
         }
     }
-    std::cout << "Total Force: " << F_tot.x << ", " << F_tot.y << ", " << F_tot.z << std::endl;
 
     // Velocity Command
     Vector3D new_acceleration(0.0, 0.0, 0.0);

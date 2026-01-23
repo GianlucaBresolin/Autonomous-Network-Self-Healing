@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
 
   double maxRangeMeters = 50.0;
   uint16_t port = 9999;
-  double simSeconds = 150.0;
+  double simSeconds = 300.0;
 
   CommandLine cmd;
   cmd.AddValue("maxRangeMeters", "Radio max range cutoff (coverage)", maxRangeMeters);
