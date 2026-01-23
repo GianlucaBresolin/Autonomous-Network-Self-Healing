@@ -69,6 +69,6 @@ class Ns3BaseStation {
   std::unordered_map<uint8_t, ::ns3::Ipv4Address> m_drone_ips;
   std::unordered_map<uint8_t, PositionUpdateMsg> m_last_position;
 
-  double m_tick_dt_s = 2.0;
+  double m_tick_dt_s = 0.5;
   uint16_t m_flood_seq = 0;
 };

@@ -7,7 +7,7 @@ Ns3Drone::Ns3Drone(
   m_id(id),
   m_node(node),
   m_comm(std::make_unique<sim::Ns3SocketTransport>(node), id),
-  m_controller(id, DEFAULT_K_ATT, DEFAULT_K_REP, DEFAULT_D_SAFE, DEFAULT_V_MAX) 
+  m_controller(id, 1.0, 5.0, 5.0, 25.0, 0.0016)
 {
   if (!m_node) {
     return;

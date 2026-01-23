@@ -24,12 +24,12 @@ void CustomMobility::setPosition(
 
     mobility->SetPosition(ns3::Vector(x, y, z));
     previous_position = mobility->GetPosition();
-    previous_time_s = ns3::Simulator::Now().GetSeconds();
+    previous_time_s = clock();
 }
 
 void CustomMobility::update(){
-    const double now_s = ns3::Simulator::Now().GetSeconds();
-    const double delta_t_s = now_s - previous_time_s;
+    const clock_t now_s = clock();
+    const double delta_t_s = (now_s - previous_time_s) / static_cast<double>(CLOCKS_PER_SEC);
     
     // update position and velocity based on:
     // - previous position
@@ -43,24 +43,30 @@ void CustomMobility::update(){
         new_x = previous_position.x + velocity.x * delta_t_s + 0.5 * acceleration.x * std::pow(delta_t_s, 2);
         new_y = previous_position.y + velocity.y * delta_t_s + 0.5 * acceleration.y * std::pow(delta_t_s, 2);
         new_z = previous_position.z + velocity.z * delta_t_s + 0.5 * acceleration.z * std::pow(delta_t_s, 2);
-
+        
         // update velocity: v = v0 + a * delta_t
         velocity.x += acceleration.x * delta_t_s;
         velocity.y += acceleration.y * delta_t_s;
         velocity.z += acceleration.z * delta_t_s;
     } else {
         // we have reached max velocity
-        double delta_constant_velocity_s = delta_t_s - delta_t_max_velocity_s;
-        // pos = pos0 + v_prev * delta_t_max_velocity + 0.5 * a * (delta_t_max_velocity)^2 + v_max * delta_constant_velocity
-        new_x = previous_position.x + velocity.x * delta_t_max_velocity_s + 0.5 * acceleration.x * std::pow(delta_t_max_velocity_s, 2) + velocity.x * delta_constant_velocity_s;
-        new_y = previous_position.y + velocity.y * delta_t_max_velocity_s + 0.5 * acceleration.y * std::pow(delta_t_max_velocity_s, 2) + velocity.y * delta_constant_velocity_s;
-        new_z = previous_position.z + velocity.z * delta_t_max_velocity_s + 0.5 * acceleration.z * std::pow(delta_t_max_velocity_s, 2) + velocity.z * delta_constant_velocity_s;
-        
-        // update velocity: v = v0 + a * delta_t_max_velocity (its magnitude is
-        // max_velocity)
-        velocity.x += acceleration.x * delta_t_max_velocity_s;
-        velocity.y += acceleration.y * delta_t_max_velocity_s;
-        velocity.z += acceleration.z * delta_t_max_velocity_s;
+        if (acceleration.x < 0) {
+            new_x = previous_position.x + velocity.x * delta_t_s + 0.5 * acceleration.x * std::pow(delta_t_s, 2);
+
+            velocity.x += acceleration.x * delta_t_s;
+        } else {
+            double delta_constant_velocity_s = delta_t_s - delta_t_max_velocity_s;
+            // pos = pos0 + v_prev * delta_t_max_velocity + 0.5 * a * (delta_t_max_velocity)^2 + v_max * delta_constant_velocity
+            new_x = previous_position.x + velocity.x * delta_t_max_velocity_s + 0.5 * acceleration.x * std::pow(delta_t_max_velocity_s, 2) + velocity.x * delta_constant_velocity_s;
+            new_y = previous_position.y + velocity.y * delta_t_max_velocity_s + 0.5 * acceleration.y * std::pow(delta_t_max_velocity_s, 2) + velocity.y * delta_constant_velocity_s;
+            new_z = previous_position.z + velocity.z * delta_t_max_velocity_s + 0.5 * acceleration.z * std::pow(delta_t_max_velocity_s, 2) + velocity.z * delta_constant_velocity_s;
+            
+            // update velocity: v = v0 + a * delta_t_max_velocity (its magnitude is
+            // max_velocity)
+            velocity.x += acceleration.x * delta_t_max_velocity_s;
+            velocity.y += acceleration.y * delta_t_max_velocity_s;
+            velocity.z += acceleration.z * delta_t_max_velocity_s;
+        }
     }
 
     previous_time_s = now_s;
@@ -73,7 +79,7 @@ std::vector<double> CustomMobility::getPosition() {
     }
     
     // update position and velocity
-    update(); 
+    // update(); 
 
     // retrieve current position
     previous_position = mobility->GetPosition();

@@ -93,6 +93,7 @@ class Ns3Drone {
 
   // Heartbeat/ack tracking (reachability is based on receiving ACKs)
   double m_tick_dt_s = 0.5;
+  
   double m_tick_phase_s = 0.0;
   double m_ack_timeout_s = 1.5;
   uint16_t m_pos_seq = 0;
