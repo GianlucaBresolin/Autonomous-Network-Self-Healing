@@ -39,4 +39,7 @@ COPY . /project
 RUN cmake -S /project -B /project/build-docker -DCMAKE_PREFIX_PATH=/opt/ns3 && \
     cmake --build /project/build-docker -j
 
-ENTRYPOINT ["/project/build-docker/swarm_demo_sim1"]
+RUN mkdir -p /project/output && chmod +x /project/entrypoint.sh
+
+ENTRYPOINT ["/project/entrypoint.sh"]
+CMD ["sim"]

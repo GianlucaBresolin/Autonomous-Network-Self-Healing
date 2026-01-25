@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstring>
 #include <iostream>
+#include <fstream>
 
 #include "interfaces/position.h"
 
@@ -32,7 +33,15 @@
 // - When mission starts: Controller drives motion and NeighborManager broadcasts to neighbors.
 class Ns3Drone {
  public:
-  Ns3Drone(uint8_t id, ::ns3::Ptr<::ns3::Node> node);
+  Ns3Drone(
+    uint8_t id,
+    ::ns3::Ptr<::ns3::Node> node,
+    float k_att = 1.5f,
+    float k_rep = 5.0f,
+    float d_safe = 1.0f,
+    float v_max = 2.5f,
+    float drone_weight_kg = 0.029f
+  );
 
   uint8_t id() const { return m_id; }
   ::ns3::Ipv4Address ip() const { return m_transport_ip; }
@@ -45,6 +54,8 @@ class Ns3Drone {
   void stopMission();
 
   void start();
+
+  void setRepositionLogger(const std::shared_ptr<std::ofstream>& csv);
 
  private:
   void onTick();
@@ -90,6 +101,8 @@ class Ns3Drone {
 
   double m_last_idle_log_s = -1.0;
   double m_idle_log_dt_s = 2.0;
+
+  std::shared_ptr<std::ofstream> m_reposition_csv;
 
   // Heartbeat/ack tracking (reachability is based on receiving ACKs)
   double m_tick_dt_s = 0.5;

@@ -1,13 +1,18 @@
 #include "platform/ns3/drone/ns3_drone.h"
 
 Ns3Drone::Ns3Drone(
-  uint8_t id, 
-  ::ns3::Ptr<::ns3::Node> node
+  uint8_t id,
+  ::ns3::Ptr<::ns3::Node> node,
+  float k_att,
+  float k_rep,
+  float d_safe,
+  float v_max,
+  float drone_weight_kg
 ) : 
   m_id(id),
   m_node(node),
   m_comm(std::make_unique<sim::Ns3SocketTransport>(node), id),
-  m_controller(id, 1.0, 5.0, 5.0, 25.0, 0.0016)
+  m_controller(id, k_att, k_rep, d_safe, v_max, drone_weight_kg)
 {
   if (!m_node) {
     return;
@@ -57,6 +62,10 @@ void Ns3Drone::setBaseStation(uint8_t base_id, ::ns3::Ipv4Address base_ip, Posit
 
 void Ns3Drone::start() {
   ::ns3::Simulator::Schedule(::ns3::Seconds(m_tick_phase_s), ::ns3::MakeCallback(&Ns3Drone::onTick, this));
+}
+
+void Ns3Drone::setRepositionLogger(const std::shared_ptr<std::ofstream>& csv) {
+  m_reposition_csv = csv;
 }
 
 void Ns3Drone::startMission() {
@@ -110,6 +119,17 @@ void Ns3Drone::onTick() {
           std::cout << " after_HELP_PROXY_TX(t=" << m_last_help_proxy_tx_s << "s)";
         }
         std::cout << std::endl;
+
+        if (m_reposition_csv && m_reposition_csv->good()) {
+          (*m_reposition_csv) << now_s << ","
+                              << static_cast<int>(m_id) << ","
+                              << static_cast<int>(hops) << ","
+                              << n_neighbors << ","
+                              << (coords.size() > 0 ? coords[0] : 0.0) << ","
+                              << (coords.size() > 1 ? coords[1] : 0.0) << ","
+                              << (coords.size() > 2 ? coords[2] : 0.0)
+                              << std::endl;
+        }
       }
       m_last_mission_log_s = now_s;
     }
