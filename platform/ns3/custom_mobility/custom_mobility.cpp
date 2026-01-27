@@ -91,7 +91,7 @@ void CustomMobility::updateVelocity(const Vector3D new_acceleration, const doubl
 
     // set new acceleration 
     acceleration = new_acceleration;
-
+    delta_t_max_velocity_s = 0.0; 
     if (acceleration.module() != 1e-6) {
         // set new delta_time_max_velocity_s = (-B +- sqrt(B^2 - 4AC)) / 2A
         // where:
@@ -124,18 +124,8 @@ void CustomMobility::updateVelocity(const Vector3D new_acceleration, const doubl
                     delta_t_max_velocity_s = t1;
                 } else if (t2 >= 0) {
                     delta_t_max_velocity_s = t2;
-                } else {
-                    // both roots are negative
-                    delta_t_max_velocity_s = 0.0; 
-                }
-            } else {
-                // no real roots
-                delta_t_max_velocity_s = 0.0; 
+                } 
             }
-        } else {
-            delta_t_max_velocity_s = 0.0; 
         }
-    } else {
-        delta_t_max_velocity_s = 0.0;
     }
 }

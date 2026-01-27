@@ -1,0 +1,70 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Autonomous Network Self-Healing in Drone Swarms}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Riccardo Fabbian}
+\IEEEauthorblockA{\textit{University of Padua: Computer Science} \\
+\textit{University of Padua}\\
+Padua, Italy \\
+fabb.riccardo@gmail.com}
+}
+
+\author{\IEEEauthorblockN{2\textsuperscript{nd} Gianluca Bresolin}
+\IEEEauthorblockA{\textit{University of Padua: Computer Science} \\
+\textit{University of Padua}\\
+Padua, Italy \\
+gianbreso02@gmail.com}
+}
+
+\maketitle
+
+\begin{abstract}
+This research reports the formation control method for a swarm of drones
+capable, after the loss of communication between a drone and the base station, 
+of autonomously reorganizing to form a multi-hop relay chain. \\
+The proposed method is based on a virtual spring dumper model, where drones
+are attracted by preceding and following drones in the multi-hop relay chain, 
+while being repelled by other drones in the swarm to avoid collisions. \\
+The experiment was conducted in \textit{ns-3}, a network simulator, where we 
+modeled a swarm of drones communicating through radio signals and moving in a 3D
+space. \\
+Results show that the proposed method is feasible and allows the swarm to
+successfully reorganize itself after the loss of communication of a drone,
+forming a stable multi-hop relay chain with intermediary drones positioned 
+close to the geometric midpoint between preceding and following ones.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Drones, Swarm, Wireless, Flooding, Self-Healing.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\section{Self-Healing Formation Control}
+\section{Simulation Tested}
+\section{Results and Analysis}
+\section{Conclusions}
+
+\section*{Acknowledgments}
+
+\section*{References}
+% Please number citations consecutively within brackets \cite{b1}. 
+
+% \begin{thebibliography}{00}
+% \bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
+% \bibitem{b8} D. P. Kingma and M. Welling, ``Auto-encoding variational Bayes,'' 2013, arXiv:1312.6114. [Online]. Available: https://arxiv.org/abs/1312.6114
+% \bibitem{b9} S. Liu, ``Wi-Fi Energy Detection Testbed (12MTC),'' 2023, gitHub repository. [Online]. Available: https://github.com/liustone99/Wi-Fi-Energy-Detection-Testbed-12MTC
+% \bibitem{b10} ``Treatment episode data set: discharges (TEDS-D): concatenated, 2006 to 2009.'' U.S. Department of Health and Human Services, Substance Abuse and Mental Health Services Administration, Office of Applied Studies, August, 2013, DOI:10.3886/ICPSR30122.v2
+% \end{thebibliography}
+
+\end{document}

@@ -48,6 +48,7 @@ class Controller {
         const float drone_weight_kg;
         bool mission_active = false;
         Vector3D idle_velocity{0.5f, 0.0f, 0.0f};
+        float min_difference = 100;
         
         void computeAttractiveForces(const Vector3D& diff, Vector3D& force);
         void computeRepulsiveForces(const Vector3D& diff, Vector3D& force);
