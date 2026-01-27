@@ -22,6 +22,10 @@ add_executable(swarm_demo_sim1
 	platform/ns3/radio_environment/radio_environment.cpp
 )
 
+add_executable(controller_tuner
+	apps/controller_tuner.cpp
+)
+
 target_include_directories(swarm_demo_sim1 PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/..
