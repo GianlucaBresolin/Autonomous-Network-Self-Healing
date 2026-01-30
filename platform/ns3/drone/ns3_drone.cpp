@@ -12,11 +12,7 @@ Ns3Drone::Ns3Drone(
   m_id(id),
   m_node(node),
   m_comm(std::make_unique<sim::Ns3SocketTransport>(node), id),
-<<<<<<< HEAD
-  m_controller(id, 1.0, 80.0, 10.0, 25.0, 0.029)
-=======
   m_controller(id, k_att, k_rep, d_safe, v_max, drone_weight_kg)
->>>>>>> c800217b537676aa87fe959b1ab8241b5cd145c0
 {
   if (!m_node) {
     return;
