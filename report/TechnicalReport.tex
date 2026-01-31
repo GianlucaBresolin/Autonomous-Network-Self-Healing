@@ -8,6 +8,7 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{stfloats}
+\usepackage{algorithm2e}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -41,14 +42,17 @@
 }
 }
 
+\newcommand{\fc}[1]{{\color{red}{FC: #1}}}
+
 
 \maketitle
 
 \begin{abstract}
 This research reports a self-healing protocol for a swarm of drones, where
 drones are able to detect loss of connection with the base station and
-reorganize themselves to restore connectivity, through local communication and
-decentralized control. Specifically, after the loss of communication between a
+reorganize themselves to restore connectivity. This is achieved through local
+communication and decentralized control. \\
+Specifically, after the loss of communication between a
 drone and the base station, drones autonomously reorganize through a formation
 control method based on a virtual spring damper model to form a multi-hop relay
 chain, where agents are attracted by preceding and following drones, while 
@@ -198,7 +202,7 @@ as an initiator. After receiving this message, the initiator starts the process
 by broadcasting a \texttt{DISCOVERY} packet with hop count set to 1. When a 
 drone receives a discovery packet, it calculates its hop-to-base value based on
 the following logic: if it currently has a direct link to the base (detected
-through the ACK-based reachability machanism during periodic position reporting
+through the ACK-based reachability mechanism during periodic position reporting
 previously described), it can immediately declare hop 1, otherwise it increments
 the hop carried by the discovery message and uses that value as its distance.
 This coupling between the flooding layer and the reachability mechanism ensures
@@ -257,13 +261,22 @@ proportional to that displacement (scaled by $K_{att}$). This linear force
 is obtained only from neighbors whose hop count is either greater or less
 than the current drone's hop count (i.e., the preceding and following drones in
 the relay chain), thus driving the drone toward the geometric midpoint between
-them. \\ 
+them.
+\begin{equation} 
+    {F}_{tot} = F_{tot} + K_{att} \cdot (\vec{p}_j - \vec{p}_i) \quad \forall j\in \{N_{prev} \cup N_{next}\}
+\end{equation}
+
 To avoid collisions, when the neighbor is closer than a safety threshold
 $D_{safe}$, the controller adds a repulsive term whose magnitude grows as
 $1/d^2$ (scaled by $K_{rep}$), pushing the drone away from the neighbor along
 the unit displacement  direction. We underline how this non-linear repulsive
 force is obtained from all neighbors, including also peers (i.e., drones with
-the same hop count value). \\ 
+the same hop count value). 
+
+\begin{gather}
+    \vec{F}_{tot} = \vec{F}_{tot} - K_{rep} \cdot \left(\frac{1}{dist^2}\right) \cdot \frac{\vec{p}_j - \vec{p}_i}{dist} \quad \forall j \in \{N \mid dist < D_{safe}\} \\
+    \text{where } dist = \|\vec{p}_i - \vec{p}_j\|
+\end{gather}
 
 The resulting net force is mapped to an acceleration vector according to
 Newton's second law, factoring in the drone's mass parameter. This acceleration
@@ -279,7 +292,7 @@ monitoring state and a mission (self-healing) state. The intent behind this
 split is to keep the system lightweight under normal conditions while still
 being able to ``switch on'' coordinated motion when a disconnection is detected.
 
-\section{Simulation Tested}
+\section{Experimental Setup}
 The proposed self-healing protocol was evaluated through a custom simulation
 scenario implemented in \textit{ns-3}, a discrete-event network simulator widely
 used for research and educational purposes. 
@@ -305,8 +318,8 @@ partition between one drone and the base station, while keeping it connected to
 the rest of the swarm.  
 The base station is placed at the origin $(0,0,0)$ while the drones are located
 at $(20,10,0)$, $(60,15,0)$ and $(40,20,0)$. \\
-The base station is responible for triggering flooding to enable hop discovery:
-in this simulation, our base station schedule a \texttt{START} flood message
+The base station is responsible for triggering flooding to enable hop discovery:
+in this simulation, our base station schedules a \texttt{START} flood message
 with drone $D_1$ as initiator every 0.5 \, s. \\
 Regarding drones, each one sets its periodic tick at 0.5 \, s: each tick implies
 three main actions, performed in the following order:
@@ -328,10 +341,11 @@ drones, so that its broadcast help request can be received. \\
 After the expiration of the ACK timeout, set in this simulation at 1.5 \,s, the
 victim drone will send a single \texttt{HELP\_PROXY} broadcast. It is important
 to note that in the current implementation, the requester does not switch to
-mission mode active: this design choice prevents the relay chain to collapse
-due to the requester suffering only attractive forces from preceding neighbors,
-since it represents the estremity of the chain. For this reason, the
-self-healing protocol is driven by drones that hear the request. \\
+mission mode active, remaining in the idle state as virtual anchor: this design 
+choice prevents the relay chain from collapsing due to the requester suffering 
+only attractive forces from preceding neighbors, since it represents the 
+estremity of the chain. For this reason, the self-healing protocol is driven by
+drones that hear the request. \\
 Once the help request is broadcasted, drones $D_1$ and $D_3$ switch to 
 mission mode and begin applying the virtual spring-damper controller at each
 tick. \\
@@ -499,11 +513,11 @@ multi-hop relay chain that restores connectivity. \\
 The trajectory of each drone during the simulation is visualized in
 Figure~\ref{fig:drone-trajectories}, where the repositioning behavior and
 final formation can be observed. \\
-
+\fc{Avete esperimenti su "connectivity" or "packet delivery ratio" over time (prima durante e dopo l'algoritmo) per dimostrare che ha funzionato}
 \begin{figure*}[ht]
     \centering
     \includegraphics[width=1.0\textwidth]{drone_trajectories.png}
-    \caption{Drone Trajectories During Self-Healing Simulation}
+    \caption{Drone Trajectories During Self-Healing Simulation\fc{non so se è il mio computer ma queste figure non sono molto chiare (ne in senso di colore ne in senso di "messaggio che dovrebbero trasmettere"}}
     \label{fig:drone-trajectories}
 \end{figure*}
 
@@ -569,9 +583,9 @@ disconnected node has an undefined hop value: during this transient phase, the
 controller treats most neighbors as having a different hop count, pulling
 helpers more aggressively until a stable gradient is established. \\
 Finally, our \texttt{CustomMobility} model advances drone states based on 
-elapsed wall-clock time between actuation calls. While this is sufficient for a 
-qualitative evaluation, it introduces sensitivity to host machine load and
-prevents full deterministic reproducibility. Furthermore, the mobility model
+elapsed simulation time between actuation calls. While this is sufficient for a 
+qualitative evaluation, it prevents full deterministic reproducibility when
+the simulation is run with different random seeds. Furthermore, the mobility model
 implements a simplified kinematic integration that neglects aerodynamic effects, 
 environmental disturbances, and actuator dynamics. Such abstractions may lead to an
 optimistic estimation of the controller's effectiveness compared to real-world
@@ -581,15 +595,8 @@ Overall, despite the underlined limitations of a purely software-based
 simulation, the results suggest that a hardware validation could be feasible,
 especially in the context of \textit{Crazyflie} swarms.  
 
-\section*{References}
-\begin{itemize}
-    \item Piemngam, K., Nilkhamhang, I. and Bunnun, P., 2019, October. A virtual spring damper method for formation control of the multi omni-directional robots in cooperative transportation. In 2019 11th International Conference on Information Technology and Electrical Engineering (ICITEE) (pp. 1-6). IEEE.
-    \item Ouyang, Q., Wu, Z., Cong, Y. and Wang, Z., 2023. Formation control of unmanned aerial vehicle swarms: A comprehensive review. Asian Journal of Control, 25(1), pp.570-593.
-    \item Kabore, K.M. and Güler, S., 2021. Distributed formation control of drones with onboard perception. IEEE/ASME Transactions on Mechatronics, 27(5), pp.3121-3131.
-    \item Chen, Q., Veres, S.M., Wang, Y. and Meng, Y., 2015. Virtual spring-damper mesh-based formation control for spacecraft swarms in potential fields. Journal of Guidance, Control, and Dynamics, 38(3), pp.539-546.
-    \item ns-3 Consortium, “ns-3 network simulator”, https://www.nsnam.org
-    \item ns-3 Consortium, “NetAnim — ns-3 Network Animator”, https://www.nsnam.org/wiki/NetAnim
-    \item Bitcraze AB, Crazyflie 2.x Nano Quadcopter, https://www.bitcraze.io
-\end{itemize}
+\nocite{*}
+\bibliographystyle{plain} 
+\bibliography{references}
 
 \end{document}
