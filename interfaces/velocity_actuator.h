@@ -6,4 +6,5 @@ class VelocityActuatorInterface {
     public:
         virtual ~VelocityActuatorInterface() = default;
         virtual void applyVelocity(const Vector3D acceleration, const double max_velocity) const = 0;
+        virtual void brake(const double decel_magnitude) const = 0;  // Decelerate to stop
 };

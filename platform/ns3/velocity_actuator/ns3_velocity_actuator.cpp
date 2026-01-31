@@ -12,3 +12,10 @@ void Ns3VelocityActuator::applyVelocity(const Vector3D acceleration, const doubl
     }
     mobility->updateVelocity(acceleration, max_velocity);
 }
+
+void Ns3VelocityActuator::brake(const double decel_magnitude) const {
+    if (!mobility) {
+        return;
+    }
+    mobility->brake(decel_magnitude);
+}

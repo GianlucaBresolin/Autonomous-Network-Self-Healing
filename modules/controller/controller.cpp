@@ -29,6 +29,14 @@ void Controller::setIdleVelocity(const Vector3D& velocity) {
     idle_velocity = velocity;
 }
 
+void Controller::setHovering(bool hover) {
+    hovering = hover;
+}
+
+bool Controller::isHovering() const {
+    return hovering;
+}
+
 void Controller::computeAttractiveForces(const Vector3D& diff, Vector3D& force) {
     force = force + (K_att * diff);
 }
@@ -60,9 +68,27 @@ void Controller::step(
     if (!flooding_manager || !neighbor_manager || !position) {
         return;
     }
+
+    // Hovering mode: lost drone decelerates to stop and hovers in place.
+    // Apply deceleration opposite to current velocity direction until stopped.
+    if (hovering && !mission_active) {
+        // Use the brake method which applies deceleration opposite to velocity
+        const double decel_magnitude = 0.5;  // m/s^2 deceleration
+        velocity_actuator->brake(decel_magnitude);
+
+        // Still broadcast our neighbor info while hovering.
+        position->retrieveCurrentPosition();
+        neighbor_manager->sendToNeighbors(
+            self_id,
+            position,
+            flooding_manager->getHopsFromBase()
+        );
+        return;
+    }
+
     if (!mission_active) {
         // Mission inactive: idle behavior
-        Vector3D idle_acceleration{0.0, 0.0, 0.0};
+        Vector3D idle_acceleration{0.1, 0.1, 0.1};
         velocity_actuator->applyVelocity(idle_acceleration, V_max);
 
         // Still broadcast our neighbor info while idling.

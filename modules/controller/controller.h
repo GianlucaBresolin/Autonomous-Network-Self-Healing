@@ -31,6 +31,9 @@ class Controller {
         void setMissionActive(bool active);
         bool isMissionActive() const;
 
+        void setHovering(bool hovering);
+        bool isHovering() const;
+
         void setIdleVelocity(const Vector3D& velocity);
         void step(
             FloodManagerInterface* flooding_manager,
@@ -47,6 +50,7 @@ class Controller {
         const float V_max;     
         const float drone_weight_kg;
         bool mission_active = false;
+        bool hovering = false;  // When true, drone decelerates to stop and hovers
         Vector3D idle_velocity{0.5f, 0.0f, 0.0f};
         float min_difference = 100;
         
