@@ -11,9 +11,7 @@ class CustomMobility {
         void setPosition(const double x, const double y, const double z); 
         void update();
         std::vector<double> getPosition();
-        Vector3D getVelocity() const;
         void updateVelocity(const Vector3D acceleration, const double max_velocity);
-        void brake(const double decel_magnitude);  // Decelerate to stop
         
     private:
         ns3::Ptr<ns3::MobilityModel> mobility;

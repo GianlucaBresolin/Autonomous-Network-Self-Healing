@@ -364,9 +364,6 @@ void Ns3Drone::sendHelpProxy() {
 
   help_proxy_sent = true;
 
-  // Lost drone should decelerate and hover in place while waiting for help.
-  m_controller.setHovering(true);
-
   // HELP_PROXY is the trigger to start the mission behavior.
   // startMission();
 }

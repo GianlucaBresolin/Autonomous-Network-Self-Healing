@@ -130,30 +130,6 @@ std::vector<double> CustomMobility::getPosition() {
     };
 }
 
-Vector3D CustomMobility::getVelocity() const {
-    return velocity;
-}
-
-void CustomMobility::brake(const double decel_magnitude) {
-    // First, apply any pending motion from the previous acceleration
-    update();
-    
-    // If already stopped (or nearly stopped), just set zero acceleration
-    const double speed = velocity.module();
-    if (speed < 0.01) {
-        acceleration = Vector3D(0.0, 0.0, 0.0);
-        velocity = Vector3D(0.0, 0.0, 0.0);
-        return;
-    }
-    
-    // Apply deceleration opposite to current velocity direction
-    Vector3D decel_direction = velocity.unit_vector();
-    acceleration = decel_direction * (-decel_magnitude);
-    
-    // Calculate time to stop: t = |v| / decel_magnitude
-    delta_t_max_velocity_s = speed / decel_magnitude;
-}
-
 void CustomMobility::updateVelocity(const Vector3D new_acceleration, const double new_max_velocity) {
     // First, apply any pending motion from the previous acceleration
     update();

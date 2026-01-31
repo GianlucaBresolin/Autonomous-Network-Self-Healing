@@ -57,20 +57,20 @@ struct RunMetrics {
 };
 
 struct CliArgs {
-  double kAttMin = 0.5;
-  double kAttMax = 2.0;
-  double kAttStep = 0.5;
-  double kRepMin = 1.0;
-  double kRepMax = 8.0;
+  double kAttMin = 1.0;
+  double kAttMax = 1.0;
+  double kAttStep = 1.0;
+  double kRepMin = 5.0;
+  double kRepMax = 5.0;
   double kRepStep = 1.0;
-  double dSafeMin = 1.0;
-  double dSafeMax = 8.0;
+  double dSafeMin = 2.0;
+  double dSafeMax = 2.0;
   double dSafeStep = 1.0;
-  double simSeconds = 600.0;
-  double targetX = 30.0;
-  double targetY = 7.5;
+  double simSeconds = 150.0;
+  double targetX = 23.0;
+  double targetY = 9.0;
   double targetZ = 0.0;
-  int lostDroneId = 1;  // Drone 1 is the lost drone (sends HELP_PROXY)
+  int lostDroneId = 2;  // Drone 2 is the lost drone (sends HELP_PROXY)
 };
 
 bool TryGetArgValue(const std::vector<std::string>& args, const std::string& key, std::string* value) {

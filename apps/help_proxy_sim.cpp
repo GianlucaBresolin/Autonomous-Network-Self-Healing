@@ -42,8 +42,8 @@ int main(int argc, char* argv[]) {
   uint16_t port = 9999;
   double simSeconds = 300.0;
   double kAtt = 1.0;
-  double kRep = 15.0;
-  double dSafe = 2.0;
+  double kRep = 5.0;
+  double dSafe = 4.0;
   double vMax = 1.0;
   double droneWeightKg = 0.029;
   std::string csvOut = "";
@@ -70,13 +70,13 @@ int main(int argc, char* argv[]) {
   NodeContainer nodes;
   nodes.Create(1 + 3);  // node 0: base, 1..3: drones
 
-  // Place drones initially inside base coverage.
-  // Drone 1 will drift out due to idle acceleration and eventually send HELP_PROXY.
-  // Drone 2 and 3 are positioned to relay and respond.
-  EnsureMobility(nodes.Get(0), Vector(0.0, 0.0, 0.0));    // Base station
-  EnsureMobility(nodes.Get(1), Vector(45.0, 15.0, 0.0));  // Drone 1: starts inside coverage, will drift out
-  EnsureMobility(nodes.Get(2), Vector(30.0, 10.0, 0.0));  // Drone 2: inside coverage
-  EnsureMobility(nodes.Get(3), Vector(25.0, 12.0, 0.0));   // Drone 3: inside coverage
+  // Place drone 2 initially outside base coverage so it will timeout and emit HELP_PROXY.
+  // Keep it within range of at least one other drone (drone 3) so the HELP_PROXY can be received,
+  // while keeping it far enough from the base (>= 50m) that it doesn't re-enter immediately.
+  EnsureMobility(nodes.Get(0), Vector(0.0, 0.0, 0.0));
+  EnsureMobility(nodes.Get(1), Vector(60.0, 15.0, 0.0));
+  EnsureMobility(nodes.Get(2), Vector(40.0, 20.0, 0.0));
+  EnsureMobility(nodes.Get(3), Vector(20.0, 25.0, 0.0));
 
   Ns3BaseStation base(0, nodes.Get(0));
   base.setPosition(0.0, 0.0, 0.0);
