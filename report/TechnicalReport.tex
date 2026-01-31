@@ -7,6 +7,8 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{stfloats}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
@@ -14,12 +16,12 @@
 \title{Autonomous Network Self-Healing in Drone Swarms}
 
 \author{
-\IEEEauthorblockN{1\textsuperscript{st} Riccardo Fabbian}
+\IEEEauthorblockN{1\textsuperscript{st} Federico Corò}
 \IEEEauthorblockA{
     \textit{University of Padua: Computer Science}\\
     \textit{University of Padua}\\
     Padua, Italy\\
-    fabb.riccardo@gmail.com
+    federico.coro@unipd.it
 }
 \and
 \IEEEauthorblockN{2\textsuperscript{nd} Gianluca Bresolin}
@@ -29,25 +31,36 @@
     Padua, Italy\\
     gianbreso02@gmail.com
 }
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Riccardo Fabbian}
+\IEEEauthorblockA{
+    \textit{University of Padua: Computer Science}\\
+    \textit{University of Padua}\\
+    Padua, Italy\\
+    fabb.riccardo@gmail.com
+}
 }
 
 
 \maketitle
 
 \begin{abstract}
-This research reports the formation control method for a swarm of drones
-capable, after the loss of communication between a drone and the base station, 
-of autonomously reorganizing to form a multi-hop relay chain. \\
-The proposed method is based on a virtual spring dumper model, where drones
-are attracted by preceding and following drones in the multi-hop relay chain, 
-while being repelled by other drones in the swarm to avoid collisions. \\
-The experiment was conducted in \textit{ns-3}, a network simulator, where we 
+This research reports a self-healing protocol for a swarm of drones, where
+drones are able to detect loss of connection with the base station and
+reorganize themselves to restore connectivity, through local communication and
+decentralized control. Specifically, after the loss of communication between a
+drone and the base station, drones autonomously reorganize through a formation
+control method based on a virtual spring damper model to form a multi-hop relay
+chain, where agents are attracted by preceding and following drones, while 
+being repelled by others to avoid collisions. \\ 
+The experiment was carried out in \textit{ns-3}, a network simulator, where we 
 modeled a swarm of drones communicating through radio signals and moving in a 3D
 space. \\ 
-Results show that the proposed method is feasible and allows the swarm to
-successfully reorganize itself after the loss of communication of a drone,
-forming a stable multi-hop relay chain with intermediary drones positioned 
-close to the geometric midpoint between preceding and following ones.
+Results demonstrate the feasibility of the proposed method. After a drone loses
+communication, the swarm successfully reorganizes to maintain network
+connectivity with the base station. This is achieved by forming a stable
+multi-hop relay chain, where intermediary drones position themselves at the
+geometric midpoint between their preceding and following neighbors. 
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -55,21 +68,528 @@ Drones, Swarm, Wireless, Flooding, Self-Healing.
 \end{IEEEkeywords}
 
 \section{Introduction}
-\section{Self-Healing Formation Control}
-\section{Simulation Tested}
-\section{Results and Analysis}
-\section{Conclusions}
+In recent years, the use of drone swarms to collaboratively perform tasks has
+gained significant attention and widespread adoption in various fields.
+Compared to single drones, swarms provide increased coverage area, greater
+redundancy, and improved operation efficiency. Moreover, their modular nature
+allows different units to carry specific equipment, making the system highly
+adaptable for complex multi-task operations. \\
+However, drone swarms also face challenges, particularly in maintaining robust 
+communication among drones and with the base station and in coordinating the
+formation control laws required to perform tasks effectively. \\
+Specifically, in decentralized swarm operations, communication between a
+specific agent and the base station is frequently interrupted by signal jamming
+or geographic occlusions. In such scenarios, it is crucial for the swarm to 
+autonomously detect the communication loss and reorganize itself through a
+''self-healing'' protocol, able to form a multi-hop relay chain in order
+to avoid network partitioning and ensure continuous connectivity with the base
+station, all without centralized control. \\
 
-\section*{Acknowledgments}
+In this study, we implemented a self-healing protocol in which drones inside the
+swarm are able to detect loss of communication with the base station. By
+exchanging state information with local neighbors, the agents leverage a
+formation control method based on a virtual spring-damper to reorganize the
+swarm and form a multi-hop relay chain. \\
+Our main contribution lies in demonstrating the effectiveness of this protocol
+through an \textit{ns-3} simulation, validating its ability to maintain network
+integrity in adverse scenarios. \\
+
+The rest of this paper is organized as follows. Section II presents
+the self-healing protocol and its related formation control method. Section III
+details the simulation scenario and the \textit{ns-3} implementation. Section IV
+reports the results obtained from the simulation and their analysis. Finally,
+Section V concludes the paper and outlines potential future work.
+
+\section{Self-Healing Protocol}
+Our self-healing protocol is designed to enable a drone inside a swarm to detect 
+loss of communication with the base station and autonomously reorganize to form
+a multi-hop relay chain. The protocol comprises two main components: the
+communication loss detection mechanism and the formation control method based on
+a virtual spring-damper model.
+Upon detecting a loss of communication with the base station by a
+timeout mechanism (i.e., it does not receive any acknowledgment from the base station
+within a predefined time interval), a drone initiates the self-healing process by
+running the formation control algorithm based on the virtual spring-damper model
+with the received information from its local neighbors. \\
+This information exchange involves the current position and the respective number of
+hops to the base station, defined through a flood mechanism. \\
+Based on these data and the current drone's state, the formation control algorithm
+calculates attractive forces towards its preceding and following drones,
+identified via hop count, while applying repulsive forces against other drones
+to prevent collisions (i.e., when the distance falls below a predefined safety
+threshold). \\   
+The resulting force determines the trajectory and the velocity command. After
+applying this command, the drone broadcasts its updated position and
+hop count to its local neighbors. \\ 
+This process continues iteratively, with the drones guided to a new position that
+corresponds to the geometric midpoint between their preceding and following
+drones. This position strategy is specifically chosen to maximize the  
+Signal-to-Noise Ratio (SNR) for both links within the multi-hop relay chain. \\
+
+\subsection{System Architecture}
+The system architecture is built around two node roles: a stationary Base
+Station ($B$) and a set of mobile Drones ($D_i$) running the same overall
+control stack. To enable a future hardware verification phase, the architecture
+mirrors the Crazyflie~2.1 ecosystem as closely as possible. In particular, it
+adopts the characteristic ``two-sided'' communication pattern offered by the
+Crazyflie 2.4\,GHz radio: the base station communicates with individual drones
+using unicast, while drones coordinate with each other using broadcast.
+This design choice is reflected throughout the architecture and strongly
+influences how information propagates in the swarm. Specifically, this means
+that control traffic to the base station is sent point-to-point, while swarm
+coordination mechanisms (flooding and neighbor information exchange) are
+propagated through broadcast. \\ 
+
+At runtime, every message is first handled by the \texttt{CommunicationManager},
+which packs and unpacks \texttt{Packet} envelopes and delegates actual delivery
+to the \texttt{Transport} implementation. The envelope contains a source ID, a
+destination ID (or a broadcast ID), a high-level type (CORE, FLOOD, or
+NEIGHBOR) and a payload whose interpretation depends on the selected type. 
+Keeping a single wrapper format makes the stack easy to extend and, more
+importantly, lets higher-level modules ignore the details of how bytes move
+through the network. \\
+The received packets are then passed to a \texttt{DispatchManager}, whose job is
+simply to forward each packet to the module responsible for that protocol. This
+results in three main pathways: 
+\begin{itemize}
+    \item \texttt{FloodManager} handles hop-discovery floods;
+    \item \texttt{NeighborManager} maintains a local table of neighbor state
+    (\textit{id}, \textit{hops-to-base}, \textit{coordinates}); 
+    \item \textit{Node Logic} handles core control messages, such as position
+    reporting to the base station and the exchange of help-proxy requests and
+    ACKs. 
+\end{itemize}
+
+On the drone side, the control loop closes through motion: a \texttt{Controller}
+reads the current position and the latest neighbor information offered by the
+\texttt{NeighborManager}, computes a movement command produced by a virtual
+spring-damper model, and applies it through a \texttt{VelocityActuator}
+implementation. \\ 
+The base station, instead, remains stationary and unicast-only: it tracks drone
+position updates, replies with acknowledgments, and periodically triggers a new
+flood.
+
+\subsection{Help-Proxy Triggering}
+Our self-healing protocol requires that each drone is able to autonomously
+detect loss of communication with the base station and trigger the self-healing
+mission. \\ 
+To track reachability, each drone sends periodic \texttt{PositionUpdate}
+messages to the base station using unicast and waits for an acknowledgment
+(ACK). If no ACK is received within a safety timeout window, the drone considers
+the link broken and triggers the mission activation: this is meant to be a
+simple, swarm-visible indication that direct connectivity to the base has been
+lost.  \\
+Mission activation is triggered by an explicit ``help-proxy'' signal that is
+generated and broadcasted by the disconnected drone through an
+\texttt{HELP\_PROXY} message (as a CORE packet). Any other drone that receives a
+\texttt{HELP\_PROXY} message targeting the same base station switches into
+mission mode and starts the repositioning. The message is sent via 
+broadcast to match the Crazyflie communication model.
+
+\subsection{Flooding-Based Hop Discovery}
+The flooding component provides a simple way for drones to estimate how far they
+are (in hops) from the base station, even when direct connectivity is lost. In
+line with the Crazyflie communication model, the flood is initiated from the
+base station using unicast and then propagated towards other drones in the swarm
+using broadcast. \\
+
+The base station periodically sends a \texttt{START} message to one drone chosen
+as an initiator. After receiving this message, the initiator starts the process
+by broadcasting a \texttt{DISCOVERY} packet with hop count set to 1. When a 
+drone receives a discovery packet, it calculates its hop-to-base value based on
+the following logic: if it currently has a direct link to the base (detected
+through the ACK-based reachability machanism during periodic position reporting
+previously described), it can immediately declare hop 1, otherwise it increments
+the hop carried by the discovery message and uses that value as its distance.
+This coupling between the flooding layer and the reachability mechanism ensures
+that hop estimates remain consistent with the current network conditions and
+prevents stale ``direct'' hops from being used after a disconnection: indeed,
+before any more recent flood is observed, a node detecting a link failure
+prevents itself from reporting the stale ''hop 1'', thereby avoiding false
+attraction toward a base station link that no longer exists. \\
+
+To avoid blind rebroadcasting, each node only reacts when the new value is
+better than the best hop previously stored for the same flood instance. When
+improved, the node broadcasts a \texttt{REPORT} packet with its current best
+hop-to-base, and it also rebroadcasts \texttt{DISCOVERY} with the new hop count
+so the information can propagate further. Reports are forwarded at most once per
+improvement per reporter, which keeps the protocol lightweight. The resulting
+hop estimates are then used by the formation controller to infer relay ordering
+and drive the physical reconfiguration. 
+
+\subsection{Neighbor Information Exchange}
+To react locally and without centralized coordination, each drone in the swarm
+maintains a lightweight ``situational awareness'' view of nearby agents. This is
+implement using periodic neighbor broadcasts, where every drone announces its
+own state to the swarm and listens for the state broadcast by others. \\
+
+Neighbor information is distributed as \texttt{NEIGHBOR} packets sent in
+broadcast. The payload is kept simple to reduce overhead: it contains the sender
+ID, its current estimated hop distance to the base station, and its current
+coordinates encoded as 64-bit floating point values. \\
+On reception, the \texttt{NeighborManager} performs basic sanity checks (e.g.,
+the packet header source must match the ID stored in the payload) and updates a
+local neighbor table keyed by neighbor ID. This table is then exposed to the
+controller as a list of \texttt{NeighborInfo} entries. \\
+
+When a drone is in proximity of the base station (i.e. it can directly
+communicate with it), it will integrate into the same neighbor abstraction the
+base itself. Specifically, whenever a drone receives a position acknowledgment
+from the base, the ACK embeds the base position and a hop value of 0. The drone
+then converts this information into the same neighbor payload format and injects
+it into the \texttt{NeighborManager}. As a result, the controller can treat the
+base station just as another neighbor in its computations, without requiring
+special-case logic. 
+
+\subsection{Formation Control via Virtual Spring-Damper Model}
+Once hop distance and neighbor positions are available, the physical
+``self-healing'' behavior is implemented through a controller based on a
+virtual spring-damper model. The controller runs periodically and produces a
+motion command by combining two effects: attraction toward relevant neighbors
+(to close the gap and form a relay) and repulsion at short range (to preserve
+safe separation). \\
+
+At each step, a drone first retrieves its current coordinates via
+\texttt{PositionManager} and the latest neighbor table from the 
+\texttt{NeighborManager}. It then iterates over all known neighbors to compute 
+the relative displacement vector and accumulates an attractive contribution
+proportional to that displacement (scaled by $K_{att}$). This linear force
+is obtained only from neighbors whose hop count is either greater or less
+than the current drone's hop count (i.e., the preceding and following drones in
+the relay chain), thus driving the drone toward the geometric midpoint between
+them. \\ 
+To avoid collisions, when the neighbor is closer than a safety threshold
+$D_{safe}$, the controller adds a repulsive term whose magnitude grows as
+$1/d^2$ (scaled by $K_{rep}$), pushing the drone away from the neighbor along
+the unit displacement  direction. We underline how this non-linear repulsive
+force is obtained from all neighbors, including also peers (i.e., drones with
+the same hop count value). \\ 
+
+The resulting net force is mapped to an acceleration vector according to
+Newton's second law, factoring in the drone's mass parameter. This acceleration
+vector is then applied through the \texttt{VelocityActuator} with a maximum speed 
+constraint $V_{max}$. \\
+
+The controller can be toggled via a mission flag: when the mission is inactive,
+drones keep broadcasting their neighbor information while following an idle
+motion behavior; once the mission is activated (e.g., after an help-proxy
+trigger), the virtual spring-damper model loop drives the repositioning
+dynamics. Indeed, each drone alternates between two macro-states: an idle
+monitoring state and a mission (self-healing) state. The intent behind this
+split is to keep the system lightweight under normal conditions while still
+being able to ``switch on'' coordinated motion when a disconnection is detected.
+
+\section{Simulation Tested}
+The proposed self-healing protocol was evaluated through a custom simulation
+scenario implemented in \textit{ns-3}, a discrete-event network simulator widely
+used for research and educational purposes. 
+
+\subsection{Ns-3 Environment}
+The proposed protocol was evaluated in a custom \textit{ns-3} scenario designed to
+reproduce the key connectivity conditions that trigger self-healing. All nodes
+within the simulation share a common radio and IP environment implemented through a
+\texttt{RadioEnvironment} component. This environment installs an ad-hoc Wi-Fi
+network (IEEE 802.11b, constant 1\,Mbps data and control rate) and assigns IPv4
+addresses within a single subnet. \\
+
+Coverage uses a strict distance cutoff through \texttt{RangePropagationLossModel}.
+Since swarm broadcast is implemented as a unicast fan-out at the transport layer, a
+receive-time distance check is used to ensure that packets beyond the maximum
+range are dropped. All communications (unicast and broadcast) are carried over
+UDP sockets bound to a single configurable port. 
+
+\subsection{Scenario Configuration}
+The simulation generates four \textit{ns-3} nodes: one base station ($B$) and
+three drones ($D_1$, $D_2$, $D_3$). The initial positions are chosen to create a
+partition between one drone and the base station, while keeping it connected to
+the rest of the swarm.  
+The base station is placed at the origin $(0,0,0)$ while the drones are located
+at $(20,10,0)$, $(60,15,0)$ and $(40,20,0)$. \\
+The base station is responible for triggering flooding to enable hop discovery:
+in this simulation, our base station schedule a \texttt{START} flood message
+with drone $D_1$ as initiator every 0.5 \, s. \\
+Regarding drones, each one sets its periodic tick at 0.5 \, s: each tick implies
+three main actions, performed in the following order:
+\begin{itemize}
+    \item sends a \texttt{PositionUpdate} message to the base station via unicast;
+    \item checks if the ACK timeout has expired and, if so, broadcasts a
+    \texttt{HELP\_PROXY} request exactly once; 
+    \item runs one controller step (idle or mission mode).
+\end{itemize}
+To avoid drift accumulation, each next tick event is scheduled exactly 0.5
+\, s after the previous tick event, regardless of the time taken to perform the
+actions above, even if the protocol does not require strict synchronization. \\ 
+
+In this configuration, $D_2$ starts outside the coverage area of the base
+station (50 \, m): this will lead the drone to send periodic
+\texttt{PositionUpdate} messages, without receiving \texttt{PositionAck}
+responses from the base station, while still remaining within the range of other
+drones, so that its broadcast help request can be received. \\
+After the expiration of the ACK timeout, set in this simulation at 1.5 \,s, the
+victim drone will send a single \texttt{HELP\_PROXY} broadcast. It is important
+to note that in the current implementation, the requester does not switch to
+mission mode active: this design choice prevents the relay chain to collapse
+due to the requester suffering only attractive forces from preceding neighbors,
+since it represents the estremity of the chain. For this reason, the
+self-healing protocol is driven by drones that hear the request. \\
+Once the help request is broadcasted, drones $D_1$ and $D_3$ switch to 
+mission mode and begin applying the virtual spring-damper controller at each
+tick. \\
+
+Accordingly with the \textit{Crazyflie 2.1} specifications, each drone is
+characterized by the following parameters:
+\begin{itemize}
+    \item mass = 0.029 \, kg;
+    \item maximum velocity $V_{max}$ = 2.5 \, m/s.
+\end{itemize}
+
+\subsection{Mobility Model}
+To focus on network-driven coordination instead of flight dynamics, the drones
+use a lightweight kinematic mobility model. \\ 
+Each node in the simulation is equipped with a mobility model; specifically, we
+developed a \texttt{CustomMobility} component that wraps around the existing 
+\texttt{ConstantPositionMobilityModel}, a mobility model offered by
+\textit{ns-3}. While the \textit{ns-3} model only stores and provides node
+coordinates within a Cartesian space without inherent motion logic, our
+implementation introduces dynamic updates. \\
+Explicitly, \texttt{CustomMobility} integrates commanded accelerations over
+time to update the node state. At each acceleration command or position request, 
+the component computes the new position and velocity since the previous update,
+accordingly to the following fundamental equations of motion.
+\begin{equation}
+    \mathbf{p}_{new} = \mathbf{p}_{old} + \mathbf{v}_{old} \Delta t + \frac{1}{2} \mathbf{a} \Delta t^2 
+\end{equation}
+\begin{equation}
+    \mathbf{v}_{new} = \mathbf{v}_{old} + \mathbf{a} \Delta t
+\end{equation}
+where $\mathbf{p}$ is the position vector, $\mathbf{v}$ is the velocity vector,
+$\mathbf{a}$ is the acceleration vector, and $\Delta t$ is the time elapsed
+since the last update. \\
+Furthermore, the model ensures physical consistency by enforcing a maximum speed
+constraint on each agent. \\ 
+
+To visualize the simulation results, we integrated the
+\texttt{AnimationInterface}. This component generates an XML trace file
+based on the drones' mobility states stored in the \textit{ns-3} mobility
+models, which can be subsequently rendered using the \textit{NetAnim}
+visualization tool. 
+
+\section{Results and Analysis}
+\subsection{Parameter Tuning}
+The parameters of the virtual spring-damper model were tuned through a
+systematic grid search. \\
+The tuning process explores the parameter space defined by the triples
+$(K_{att}, K_{rep}, D_{safe})$ over user-provided minimum, maximum and step 
+values for each parameter. \\
+For each candidate configuration, the tuner executes the simulation executable
+and logs the resulting outputs into a repositioning CVS trace file. \\
+
+The current score function is intentionally simple and is focused on suppressing
+oscillations while keeping the run valid:
+\begin{equation}
+\text{score}=\overline{o}_{first} + \overline{\bar{o}} + \overline{o}_{last} + P,
+\end{equation}
+where $\overline{o}_{first}$, $\overline{\bar{o}}$, and $\overline{o}_{last}$
+are the averages across drones that produced oscillation samples, and $P$ is a
+penalty term. If no drone produces any oscillation samples (e.g., too few
+turning points), a large penalty is added to force the candidate to the bottom
+of the ranking. A second penalty is added if the minimum-distance metric cannot
+be computed from the trace.
+
+In addition to the score, the tuner prints diagnostic indicators such as average
+minimum separation, average time-to-target, and whether all drones exhibit
+strictly decreasing oscillation amplitudes. \\
+The simulation parameters are described in Table ~\ref{tab:sim-params}.\\
+
+\begin{table*}[ht]
+\caption{Simulation Parameters Description}
+\label{tab:sim-params}
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Description} \\ \hline
+Base station coverage radius & $R_{max}$ & Area inside which drones have a direct link with the base \\ \hline
+Drone mass & $m$ & Mass of a drone (CrazyFlie 2.1 in our simulation) \\ \hline
+Max drone speed & $V_{max}$ & Max speed (2.5x higher compared to the CrazyFlie 2.1) \\ \hline
+Attractive gain & $K_{att}$ & Forces attracting drones with different hop count \\ \hline
+Repulsive gain & $K_{rep}$ & Forces repulsing drones \\ \hline
+Safety distance & $D_{safe}$ & Distance below which the repulsive forces start acting  \\ \hline
+Controller tick distance & $T_{ctrl}$ & Unit of time inside the simulation \\ \hline
+Simulation duration & $T_{sim}$ & Total duration of the simulation \\ \hline
+\end{tabular}
+\end{table*}
+
+The tuning process yields the configuration detailed in
+Table~\ref{tab:sim-values}. These parameters ensure a robust trade-off between
+convergence speed and system stability, enabling effective self-healing behavior
+while mitigating excessive oscillations. \\
+These defaults can be overridden from the command line to test different
+configurations. \\
+\begin{table}[ht]
+\caption{Simulation Parameter Values}
+\label{tab:sim-values}
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\ \hline
+Base station coverage radius & $50$ m \\ \hline
+Drone mass & $29$ g \\ \hline
+Max drone speed & $2.5$ m/s \\ \hline
+Attractive gain & $1$ \\ \hline
+Repulsive gain & $5$ \\ \hline
+Safety distance & $1$  \\ \hline
+Node tick distance & $0.5$ s \\ \hline
+Simulation duration & $600$ s \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Evaluation Metrics}
+To evaluate stability and safety during the repositioning phase, the tuner
+derives a concise set of scalar metrics from the simulation logs. Each log entry
+consists of a tuple $(t,\text{id},x,y,z)$; the tuner aggregates these samples by
+drone ID to analyze individual trajectories. \\
+
+\emph{Time-to-target.} For each drone, the tuner measures the \textit{settling
+time}, defined as the first instant the agent enters a tolerance band around a
+desired target position \(\mathbf{p}_{target}\) (defined as the midpoint between
+the base station and the initial position of the disconnected drone). Formally,
+for each drone, the tuner computes: 
+\begin{equation}
+T_{target} = \min \left\{ t \mid \left\| \mathbf{p}(t) - \mathbf{p}_{target} \right\| \leq \varepsilon \right\}
+\end{equation}
+With $\varepsilon=1$ m as the tolerance threshold. If the condition is never
+met during the simulation, the tuner assigns $T_{target}=-1$. \\
+
+\emph{Oscillation Analysis via Local Extrema.} Rather than employing windowed
+statistics, the tuner estimates stability directly from the trajectory $p(t)$.
+It identifies a sequence of turning points $\{p_1, p_2, \dots, p_n\}$ at
+timestamps where the discrete derivative $\Delta p$ undergoes a sign change.
+From these extrema, the tuner derives a sequence of oscillation amplitudes: 
+\begin{equation}
+o_i = |p_{i+1} - p_i|, \quad i = 1, \dots, n-1
+\end{equation}
+For each agent, the tuner extracts the initial amplitude $o_{first} = o_1$, the
+final amplitude $o_{last} = o_{n-1}$, and the mean value: 
+\begin{equation}
+\bar{o} = \frac{1}{n-1} \sum_{i=1}^{n-1} o_i
+\end{equation}
+Additionally, a monotonicity check is performed to determine if the sequence
+$\{o_i\}$ is strictly decreasing: 
+\begin{equation}
+o_{i+1} < o_i, \quad \forall i \in \{1, \dots, n-2\}
+\end{equation}
+This provides a binary indicator of the system's damped response and asymptotic
+stability. \\
+
+\emph{Minimum inter-drone distance.} To assess collision risk and safety
+violations, the tuner monitors the minimum Euclidean distance observed between
+all pairs of drones. Given the sequential nature of log processing, the distance
+is computed at each time step using the most recent position for each drone.
+This metric serves as a safety proxy to ensure that the repulsive forces
+effectively avoid collisions. \\    
+
+\subsection{Simulation Results}
+The simulation scenario described in Section IV was executed using the default
+parameter configuration reported in Table~\ref{tab:sim-values}. \\
+As the simulation runs, drones $D_1$ and $D_3$ receive the \texttt{HELP\_PROXY}
+request from $D_2$ and switch to mission mode, applying the virtual spring-damper
+controller at each tick. Over time, both drones move toward the geometric
+midpoint between the base station and the disconnected drone $D_2$, forming a
+multi-hop relay chain that restores connectivity. \\
+The trajectory of each drone during the simulation is visualized in
+Figure~\ref{fig:drone-trajectories}, where the repositioning behavior and
+final formation can be observed. \\
+
+\begin{figure*}[ht]
+    \centering
+    \includegraphics[width=1.0\textwidth]{drone_trajectories.png}
+    \caption{Drone Trajectories During Self-Healing Simulation}
+    \label{fig:drone-trajectories}
+\end{figure*}
+
+Regarding the run-level metrics, they are computed by aggregating drones data as
+averages (e.g., average $o_{first}$ between drones that produced at least one
+oscillation value) and are summarized in Table~\ref{tab:sim-results}. \\
+
+\begin{table}[ht]
+\caption{Simulation Parameter Values}
+\label{tab:sim-results}
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Measurement} & \textbf{Value} \\ \hline
+Average First Oscillation & $0.424$ m \\ \hline
+Average Oscillation & $0.395$ m \\ \hline
+Average Last Oscillation & $0.353$ m \\ \hline
+Average Min Distance & $1.296$ m \\ \hline
+Average Time to Target & $145.35$ s \\ \hline
+\end{tabular}
+\end{table}
+
+The observed trajectories reflect a trade-off in the parameter tuning.
+Specifically, the sensitivity analysis reveals that increasing the attractive
+gain $K_{att}$ reduces convergence time but exacerbates the risk of overshoot,
+especially when the velocity saturation $V_{max}$ is active.  
+Conversely, higher $K_{rep}$ or larger $D_{safe}$ enhance safety margins;
+however, if repulsive forces dominate attractive ones, the swarm may fail to
+compress into a relay. \\
+Furthermore, as acceleration is derived from
+$\mathbf{a}=\mathbf{F}_{tot}/m$, the mass parameter \textit{m} indirectly 
+acts as damping-like factor on the control effort, with higher mass values
+leading to slower responses and reduced oscillations, at the cost of longer
+convergence times. \\
+
+\section{Conclusions}
+This work presents an autonomous self-healing protocol for drone swarms. The
+main objective is to restore connectivity to a base station following a link
+failure, relying exclusively on local communication and decentralized control.
+The proposed solution combines ACK-based reachability detection, flooding-based
+hop discovery, and periodic neighbor broadcasts with a formation controller
+based on a virtual spring-damper model, which is responsible for moving helper
+drones toward relay positions. Those relay chain positions are reached while 
+maintaining a safe distance between nearby drones. \\
+
+The protocol was implemented in \textit{ns-3}, using a communication pattern
+inspired by \textit{Crazyflie} platforms. In particular, unicast messages are
+sent toward the base station, while broadcast communication is used within the
+swarm. The system was evaluated in a scenario where one drone starts outside the
+base station coverage and sends a \texttt{HELP\_PROXY} request. The results,
+together with the tuning process, show that the swarm is able to form a
+multi-hop relay chain. Oscillations remain limited, and the safety margins are
+acceptable under the tested parameters. \\
+
+Beside these positive results, our implementation and simulation requires some
+preconditions and presents some limitations that may affect real-world
+scenarios. First, the presented self-healing protocol starts only under the
+condition where the disconnected drone is still within communication range of at least
+one helper drone: if the lost drone is completely out of range, no mission is
+triggered. Second, hop count values are determined by floods and the current
+ACK-based reachability signal. Before any more recent flood is observed, a
+disconnected node has an undefined hop value: during this transient phase, the
+controller treats most neighbors as having a different hop count, pulling
+helpers more aggressively until a stable gradient is established. \\
+Finally, our \texttt{CustomMobility} model advances drone states based on 
+elapsed wall-clock time between actuation calls. While this is sufficient for a 
+qualitative evaluation, it introduces sensitivity to host machine load and
+prevents full deterministic reproducibility. Furthermore, the mobility model
+implements a simplified kinematic integration that neglects aerodynamic effects, 
+environmental disturbances, and actuator dynamics. Such abstractions may lead to an
+optimistic estimation of the controller's effectiveness compared to real-world
+conditions. \\ 
+
+Overall, despite the underlined limitations of a purely software-based
+simulation, the results suggest that a hardware validation could be feasible,
+especially in the context of \textit{Crazyflie} swarms.  
 
 \section*{References}
-% Please number citations consecutively within brackets \cite{b1}. 
-
-% \begin{thebibliography}{00}
-% \bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
-% \bibitem{b8} D. P. Kingma and M. Welling, ``Auto-encoding variational Bayes,'' 2013, arXiv:1312.6114. [Online]. Available: https://arxiv.org/abs/1312.6114
-% \bibitem{b9} S. Liu, ``Wi-Fi Energy Detection Testbed (12MTC),'' 2023, gitHub repository. [Online]. Available: https://github.com/liustone99/Wi-Fi-Energy-Detection-Testbed-12MTC
-% \bibitem{b10} ``Treatment episode data set: discharges (TEDS-D): concatenated, 2006 to 2009.'' U.S. Department of Health and Human Services, Substance Abuse and Mental Health Services Administration, Office of Applied Studies, August, 2013, DOI:10.3886/ICPSR30122.v2
-% \end{thebibliography}
+\begin{itemize}
+    \item Piemngam, K., Nilkhamhang, I. and Bunnun, P., 2019, October. A virtual spring damper method for formation control of the multi omni-directional robots in cooperative transportation. In 2019 11th International Conference on Information Technology and Electrical Engineering (ICITEE) (pp. 1-6). IEEE.
+    \item Ouyang, Q., Wu, Z., Cong, Y. and Wang, Z., 2023. Formation control of unmanned aerial vehicle swarms: A comprehensive review. Asian Journal of Control, 25(1), pp.570-593.
+    \item Kabore, K.M. and Güler, S., 2021. Distributed formation control of drones with onboard perception. IEEE/ASME Transactions on Mechatronics, 27(5), pp.3121-3131.
+    \item Chen, Q., Veres, S.M., Wang, Y. and Meng, Y., 2015. Virtual spring-damper mesh-based formation control for spacecraft swarms in potential fields. Journal of Guidance, Control, and Dynamics, 38(3), pp.539-546.
+    \item ns-3 Consortium, “ns-3 network simulator”, https://www.nsnam.org
+    \item ns-3 Consortium, “NetAnim — ns-3 Network Animator”, https://www.nsnam.org/wiki/NetAnim
+    \item Bitcraze AB, Crazyflie 2.x Nano Quadcopter, https://www.bitcraze.io
+\end{itemize}
 
 \end{document}
