@@ -102,7 +102,7 @@ void Ns3BaseStation::handleCorePacket(const ::Packet& pkt) {
       }
       PositionUpdateMsg msg;
       std::memcpy(&msg, pkt.payload.data(), sizeof(msg));
-      handlePositionUpdate(msg);
+      handlePositionUpdate(msg, pkt.src);
       return;
     }
 
@@ -113,7 +113,7 @@ void Ns3BaseStation::handleCorePacket(const ::Packet& pkt) {
   }
 }
 
-void Ns3BaseStation::handlePositionUpdate(const PositionUpdateMsg& msg) {
+void Ns3BaseStation::handlePositionUpdate(const PositionUpdateMsg& msg, uint8_t relay_src) {
   if (msg.base_id != m_id) {
     return;
   }
@@ -121,10 +121,10 @@ void Ns3BaseStation::handlePositionUpdate(const PositionUpdateMsg& msg) {
   // Track last seen position.
   m_last_position[msg.drone_id] = msg;
 
-  sendPositionAck(msg.drone_id, msg.seq);
+  sendPositionAck(msg.drone_id, msg.seq, relay_src);
 }
 
-void Ns3BaseStation::sendPositionAck(uint8_t drone_id, uint16_t seq) {
+void Ns3BaseStation::sendPositionAck(uint8_t drone_id, uint16_t seq, uint8_t relay_src) {
   if (m_position) {
     m_position->retrieveCurrentPosition();
   }
@@ -142,7 +142,7 @@ void Ns3BaseStation::sendPositionAck(uint8_t drone_id, uint16_t seq) {
   ::Packet out;
   out.type = ::PacketType::CORE;
   out.src = m_id;
-  out.dst = drone_id;
+  out.dst = relay_src;
   out.payload.resize(sizeof(ack));
   std::memcpy(out.payload.data(), &ack, sizeof(ack));
 

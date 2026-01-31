@@ -51,9 +51,9 @@ class Ns3BaseStation {
   void dispatchPacket(const ::Packet& pkt);
   void handleCorePacket(const ::Packet& pkt);
 
-  void handlePositionUpdate(const PositionUpdateMsg& msg);
+  void handlePositionUpdate(const PositionUpdateMsg& msg, uint8_t relay_src);
 
-  void sendPositionAck(uint8_t drone_id, uint16_t seq);
+  void sendPositionAck(uint8_t drone_id, uint16_t seq, uint8_t relay_src);
 
   uint8_t m_id;
   ::ns3::Ptr<::ns3::Node> m_node;

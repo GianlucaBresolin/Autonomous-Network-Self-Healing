@@ -176,11 +176,27 @@ void Ns3Drone::handleCorePacket(const ::Packet& pkt) {
       PositionAckMsg ack;
       std::memcpy(&ack, pkt.payload.data(), sizeof(ack));
 
-      if (ack.base_id != m_base_id || ack.drone_id != m_id) {
+      if (ack.base_id != m_base_id ) {
+        return;
+      }
+      if (ack.drone_id != m_id) {
+        // Send in broadcast to the rest of the swarm.
+        ::Packet relay_pkt;
+        relay_pkt.type = ::PacketType::CORE;
+        relay_pkt.src = pkt.src;  // keep original sender
+        relay_pkt.dst = BROADCAST_ID;
+        relay_pkt.payload.resize(sizeof(ack));
+        std::memcpy(relay_pkt.payload.data(), &ack, sizeof(ack));
+        m_comm.send(relay_pkt);
         return;
       }
 
-      m_last_ack_rx_s = ::ns3::Simulator::Now().GetSeconds();
+      // Don't update m_last_ack_rx_s if we've sent HELP_PROXY - we've lost direct
+      // connectivity and relayed ACKs shouldn't make us think we're connected again.
+      // This is critical for the flood hop-count calculation to remain accurate.
+      if (!help_proxy_sent) {
+        m_last_ack_rx_s = ::ns3::Simulator::Now().GetSeconds();
+      }
       m_last_acked_seq = ack.seq;
       m_waiting_ack = false;
 
@@ -240,8 +256,40 @@ void Ns3Drone::handleCorePacket(const ::Packet& pkt) {
       return;
     }
 
-    case SimMsgType::POS_UPDATE:
+    case SimMsgType::POS_UPDATE:{
+      if (pkt.payload.size() < sizeof(PositionUpdateMsg)) {
+        return;
+      }
+      PositionUpdateMsg msg;
+      std::memcpy(&msg, pkt.payload.data(), sizeof(msg));
+
+      // Ignore updates not for our base station.
+      if (msg.base_id != m_base_id) {
+        return;
+      }
+
+      // Don't relay our own position updates.
+      if (msg.drone_id == m_id) {
+        return;
+      }
+
+      // Only relay broadcasts (from lost drones) to base station.
+      // If the packet was already unicast to base, don't relay.
+      if (pkt.dst != BROADCAST_ID) {
+        return;
+      }
+
+      // Relay to base station.
+      ::Packet relay_pkt;
+      relay_pkt.type = ::PacketType::CORE;
+      relay_pkt.src = m_id;  // use our id as sender
+      relay_pkt.dst = m_base_id;
+      relay_pkt.payload.resize(sizeof(msg));
+      std::memcpy(relay_pkt.payload.data(), &msg, sizeof(msg));
+
+      m_comm.send(relay_pkt);
       return;
+    }
 
     default:
       return;
@@ -261,20 +309,23 @@ void Ns3Drone::sendPositionUpdate() {
   m_position->retrieveCurrentPosition();
   const auto coords = m_position->getCoordinates();
 
-  PositionUpdateMsg msg;
-  msg.drone_id = m_id;
-  msg.base_id = m_base_id;
-  msg.seq = ++m_pos_seq;
-  msg.x = coords.size() > 0 ? static_cast<float>(coords[0]) : 0.0f;
-  msg.y = coords.size() > 1 ? static_cast<float>(coords[1]) : 0.0f;
-  msg.z = coords.size() > 2 ? static_cast<float>(coords[2]) : 0.0f;
+  // If help proxy was sent, send position updates via broadcast to inform helpers.
+  // Otherwise, unicast to base station.
+
+  PositionUpdateMsg pos;
+  pos.drone_id = m_id;
+  pos.base_id = m_base_id;
+  pos.seq = ++m_pos_seq;
+  pos.x = coords.size() > 0 ? static_cast<float>(coords[0]) : 0.0f;
+  pos.y = coords.size() > 1 ? static_cast<float>(coords[1]) : 0.0f;
+  pos.z = coords.size() > 2 ? static_cast<float>(coords[2]) : 0.0f;
 
   ::Packet out;
   out.type = ::PacketType::CORE;
   out.src = m_id;
-  out.dst = m_base_id;
-  out.payload.resize(sizeof(msg));
-  std::memcpy(out.payload.data(), &msg, sizeof(msg));
+  out.dst = help_proxy_sent ? BROADCAST_ID : m_base_id;
+  out.payload.resize(sizeof(pos));
+  std::memcpy(out.payload.data(), &pos, sizeof(pos)); 
 
   m_comm.send(out);
   m_last_pos_send_s = now_s;
