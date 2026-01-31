@@ -88,7 +88,7 @@ void Controller::step(
 
     if (!mission_active) {
         // Mission inactive: idle behavior
-        Vector3D idle_acceleration{0.1, 0.1, 0.1};
+        Vector3D idle_acceleration{0.1, 0.1, 0.0};
         velocity_actuator->applyVelocity(idle_acceleration, V_max);
 
         // Still broadcast our neighbor info while idling.
