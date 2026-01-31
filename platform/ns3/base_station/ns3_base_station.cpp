@@ -28,7 +28,8 @@ Ns3BaseStation::Ns3BaseStation(
 }
 
 void Ns3BaseStation::start() {
-  ::ns3::Simulator::Schedule(::ns3::Seconds(0.5), ::ns3::MakeCallback(&Ns3BaseStation::onTick, this));
+  double initial_delay_s = 0.1;
+  ::ns3::Simulator::Schedule(::ns3::Seconds(initial_delay_s), ::ns3::MakeCallback(&Ns3BaseStation::onTick, this));
 }
 
 void Ns3BaseStation::onTick() {

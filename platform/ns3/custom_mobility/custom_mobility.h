@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include <ctime>
 
 #include "ns3/core-module.h"
 #include "ns3/constant-position-mobility-model.h"
@@ -17,9 +16,9 @@ class CustomMobility {
     private:
         ns3::Ptr<ns3::MobilityModel> mobility;
         ns3::Vector previous_position;
-        clock_t previous_time_s = 0;
+        double previous_time_s = 0.0;  // NS-3 simulation time (seconds)
         double delta_t_max_velocity_s = 0.0;
-        double max_velocity;
+        double max_velocity = 0.0;
         Vector3D acceleration;
         Vector3D velocity;
     };

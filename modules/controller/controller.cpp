@@ -90,12 +90,6 @@ void Controller::step(
         }
         if (diff.module() < D_safe) {
             // Repulsive force
-            if (self_id == 1) {
-                if (diff.x < min_difference) {
-                    min_difference = diff.x;
-                    std::cout << "New min difference: " << min_difference << std::endl;
-                }
-            }
             computeRepulsiveForces(diff, F_tot);
         }
     }
