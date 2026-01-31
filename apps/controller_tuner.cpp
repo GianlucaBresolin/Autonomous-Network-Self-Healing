@@ -70,7 +70,7 @@ struct CliArgs {
   double targetX = 30.0;
   double targetY = 7.5;
   double targetZ = 0.0;
-  int lostDroneId = 2;
+  int lostDroneId = 1;  // Drone 1 is the lost drone (sends HELP_PROXY)
 };
 
 bool TryGetArgValue(const std::vector<std::string>& args, const std::string& key, std::string* value) {
@@ -334,19 +334,20 @@ static void ComputeMinDistancesToOthers(
     (*stats)[i].minDistanceToOthers = std::numeric_limits<double>::infinity();
   }
 
+  // Track positions of ALL drones (including lost drone) for distance computation
+  // We want to know if any repositioning drone gets too close to ANY other drone
   std::unordered_map<int, Vec3> lastPositions;
 
   for (const auto& s : samples) {
     const int id = s.droneId;
-    if (lostDroneId >= 0 && id == lostDroneId) {
-      continue;
-    }
+    // DON'T filter by lostDroneId here - we need all positions for distance calculation
     lastPositions[id] = {s.x, s.y, s.z};
 
     if (lastPositions.size() < 2) {
       continue;
     }
 
+    // Compute distances between current drone and all other tracked drones
     for (const auto& other : lastPositions) {
       if (other.first == id) {
         continue;
@@ -356,6 +357,7 @@ static void ComputeMinDistancesToOthers(
       const double dz = s.z - other.second.z;
       const double dist = std::sqrt(dx * dx + dy * dy + dz * dz);
 
+      // Update min distance for drones that are in our stats
       auto idxA = idToIndex.find(id);
       auto idxB = idToIndex.find(other.first);
       if (idxA != idToIndex.end() && dist < (*stats)[idxA->second].minDistanceToOthers) {

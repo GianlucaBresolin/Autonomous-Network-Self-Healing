@@ -39,63 +39,71 @@ void CustomMobility::update(){
         return;
     }
     
-    // update position and velocity based on:
-    // - previous position
-    // - previous velocity
-    // - current acceleration
-    // - time elapsed since last update
     double new_x, new_y, new_z;
     
-    if (delta_t_max_velocity_s <= 0.0 || delta_t_s <= delta_t_max_velocity_s || std::isinf(delta_t_max_velocity_s)) {
-        // Case 1: We have not reached max velocity within this time step
-        // or delta_t_max_velocity_s is invalid (no max velocity constraint)
+    // Determine if we will reach max velocity during this time step
+    const bool will_reach_max = (delta_t_max_velocity_s > 0.0) && 
+                                 !std::isinf(delta_t_max_velocity_s) && 
+                                 (delta_t_s > delta_t_max_velocity_s);
+    
+    if (!will_reach_max) {
+        // Case 1: We won't reach max velocity in this time step
+        // Apply standard kinematic equations: pos = pos0 + v*t + 0.5*a*t^2
         
-        // pos = pos0 + v_prev * delta_t + 0.5 * a * (delta_t)^2
-        new_x = previous_position.x + velocity.x * delta_t_s + 0.5 * acceleration.x * std::pow(delta_t_s, 2);
-        new_y = previous_position.y + velocity.y * delta_t_s + 0.5 * acceleration.y * std::pow(delta_t_s, 2);
-        new_z = previous_position.z + velocity.z * delta_t_s + 0.5 * acceleration.z * std::pow(delta_t_s, 2);
+        // First update velocity
+        Vector3D new_velocity = velocity;
+        new_velocity.x += acceleration.x * delta_t_s;
+        new_velocity.y += acceleration.y * delta_t_s;
+        new_velocity.z += acceleration.z * delta_t_s;
         
-        // update velocity: v = v0 + a * delta_t
-        velocity.x += acceleration.x * delta_t_s;
-        velocity.y += acceleration.y * delta_t_s;
-        velocity.z += acceleration.z * delta_t_s;
+        // Clamp velocity if it exceeds max
+        if (max_velocity > 0.0 && new_velocity.module() > max_velocity) {
+            new_velocity = new_velocity.unit_vector() * max_velocity;
+        }
+        
+        // Use average velocity for position update (trapezoidal integration)
+        // This is more accurate and respects velocity limits
+        const double avg_vx = (velocity.x + new_velocity.x) / 2.0;
+        const double avg_vy = (velocity.y + new_velocity.y) / 2.0;
+        const double avg_vz = (velocity.z + new_velocity.z) / 2.0;
+        
+        new_x = previous_position.x + avg_vx * delta_t_s;
+        new_y = previous_position.y + avg_vy * delta_t_s;
+        new_z = previous_position.z + avg_vz * delta_t_s;
+        
+        velocity = new_velocity;
     } else {
         // Case 2: We reach max velocity during this time step
-        const double delta_constant_velocity_s = delta_t_s - delta_t_max_velocity_s;
+        const double t_accel = delta_t_max_velocity_s;  // time accelerating
+        const double t_coast = delta_t_s - t_accel;     // time at constant max velocity
         
-        // First, compute velocity at the transition point (when we hit max velocity)
-        const double vx_at_max = velocity.x + acceleration.x * delta_t_max_velocity_s;
-        const double vy_at_max = velocity.y + acceleration.y * delta_t_max_velocity_s;
-        const double vz_at_max = velocity.z + acceleration.z * delta_t_max_velocity_s;
-
-        // Position update:
-        // Phase 1: accelerate from (pos, v) to transition point
-        // Phase 2: coast at constant velocity (v_at_max) for remaining time
-        new_x = previous_position.x 
-                + velocity.x * delta_t_max_velocity_s 
-                + 0.5 * acceleration.x * std::pow(delta_t_max_velocity_s, 2) 
-                + vx_at_max * delta_constant_velocity_s;
-        new_y = previous_position.y 
-                + velocity.y * delta_t_max_velocity_s 
-                + 0.5 * acceleration.y * std::pow(delta_t_max_velocity_s, 2) 
-                + vy_at_max * delta_constant_velocity_s;
-        new_z = previous_position.z 
-                + velocity.z * delta_t_max_velocity_s 
-                + 0.5 * acceleration.z * std::pow(delta_t_max_velocity_s, 2) 
-                + vz_at_max * delta_constant_velocity_s;
-            
-        // Update velocity to the max-velocity-clamped value
-        velocity.x = vx_at_max;
-        velocity.y = vy_at_max;
-        velocity.z = vz_at_max;
-
-        //std::cout << "[CustomMobility] t=" << now_s 
-        //          << " reached max velocity: v=(" << velocity.x << "," << velocity.y << "," << velocity.z << ")"
-        //          << " |v|=" << velocity.module()
-        //          << " delta_t_max_velocity_s=" << delta_t_max_velocity_s << std::endl;
+        // Compute velocity at the transition point (when we hit max velocity)
+        Vector3D v_at_max(
+            velocity.x + acceleration.x * t_accel,
+            velocity.y + acceleration.y * t_accel,
+            velocity.z + acceleration.z * t_accel
+        );
+        
+        // Clamp to max velocity (should already be at max, but ensure it)
+        if (max_velocity > 0.0 && v_at_max.module() > max_velocity) {
+            v_at_max = v_at_max.unit_vector() * max_velocity;
+        }
+        
+        // Position update in two phases:
+        // Phase 1: accelerate using average velocity
+        const double avg_vx_accel = (velocity.x + v_at_max.x) / 2.0;
+        const double avg_vy_accel = (velocity.y + v_at_max.y) / 2.0;
+        const double avg_vz_accel = (velocity.z + v_at_max.z) / 2.0;
+        
+        // Phase 2: coast at max velocity
+        new_x = previous_position.x + avg_vx_accel * t_accel + v_at_max.x * t_coast;
+        new_y = previous_position.y + avg_vy_accel * t_accel + v_at_max.y * t_coast;
+        new_z = previous_position.z + avg_vz_accel * t_accel + v_at_max.z * t_coast;
+        
+        velocity = v_at_max;
     }
     
-    // Clamp velocity magnitude to max_velocity (safety check for floating-point errors)
+    // Final safety clamp on velocity
     if (max_velocity > 0.0 && velocity.module() > max_velocity) {
         velocity = velocity.unit_vector() * max_velocity;
     }
