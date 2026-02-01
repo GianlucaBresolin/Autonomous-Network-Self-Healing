@@ -55,14 +55,15 @@ void CustomMobility::update(){
         new_velocity.x += acceleration.x * delta_t_s;
         new_velocity.y += acceleration.y * delta_t_s;
         new_velocity.z += acceleration.z * delta_t_s;
-        
-        // Clamp velocity if it exceeds max
+
+        // Clamp velocity if it exceeds max_velocity
+        // (case in which we are already at max velocity but we are changing
+        // direction) 
         if (max_velocity > 0.0 && new_velocity.module() > max_velocity) {
             new_velocity = new_velocity.unit_vector() * max_velocity;
         }
         
         // Use average velocity for position update (trapezoidal integration)
-        // This is more accurate and respects velocity limits
         const double avg_vx = (velocity.x + new_velocity.x) / 2.0;
         const double avg_vy = (velocity.y + new_velocity.y) / 2.0;
         const double avg_vz = (velocity.z + new_velocity.z) / 2.0;
@@ -83,8 +84,9 @@ void CustomMobility::update(){
             velocity.y + acceleration.y * t_accel,
             velocity.z + acceleration.z * t_accel
         );
-        
-        // Clamp to max velocity (should already be at max, but ensure it)
+
+        // Clamp velocity if it exceeds max_velocity
+        // (should not happen here, but keep for safety)
         if (max_velocity > 0.0 && v_at_max.module() > max_velocity) {
             v_at_max = v_at_max.unit_vector() * max_velocity;
         }
@@ -101,11 +103,6 @@ void CustomMobility::update(){
         new_z = previous_position.z + avg_vz_accel * t_accel + v_at_max.z * t_coast;
         
         velocity = v_at_max;
-    }
-    
-    // Final safety clamp on velocity
-    if (max_velocity > 0.0 && velocity.module() > max_velocity) {
-        velocity = velocity.unit_vector() * max_velocity;
     }
 
     previous_time_s = now_s;
@@ -139,7 +136,6 @@ void CustomMobility::updateVelocity(const Vector3D new_acceleration, const doubl
     max_velocity = new_max_velocity;
     delta_t_max_velocity_s = 0.0;
     
-    // If no acceleration or no max velocity constraint, skip time-to-max calculation
     if (acceleration.module() == 0.0 || max_velocity <= 0.0) {
         return;
     }
@@ -167,7 +163,8 @@ void CustomMobility::updateVelocity(const Vector3D new_acceleration, const doubl
     const double C = std::pow(velocity.x, 2) + std::pow(velocity.y, 2) + std::pow(velocity.z, 2) - std::pow(max_velocity, 2);
     
     if (A == 0.0) {
-        // Zero acceleration, we'll never reach max velocity through acceleration
+        // Zero acceleration, we'll never reach max velocity through
+        // acceleration 
         delta_t_max_velocity_s = std::numeric_limits<double>::infinity();
         return;
     }
@@ -176,7 +173,7 @@ void CustomMobility::updateVelocity(const Vector3D new_acceleration, const doubl
     
     if (discriminant < 0.0) {
         // No real solution - acceleration won't bring us to max velocity
-        // (this can happen if acceleration is perpendicular to velocity)
+        // (infeasible scenario, but handle coherently)
         delta_t_max_velocity_s = std::numeric_limits<double>::infinity();
         return;
     }
@@ -186,8 +183,8 @@ void CustomMobility::updateVelocity(const Vector3D new_acceleration, const doubl
     const double t2 = (-B - sqrt_discriminant) / (2.0 * A);
     
     // We want the smallest positive root
-    // The two roots represent when speed increases to max_velocity and when it decreases back
-    // (if we're accelerating through the origin in velocity space)
+    // The two roots represent when speed increases to max_velocity and when it
+    // decreases back
     
     if (t1 >= 0.0 && t2 >= 0.0) {
         // Both roots are positive - take the smaller one
@@ -199,7 +196,7 @@ void CustomMobility::updateVelocity(const Vector3D new_acceleration, const doubl
         delta_t_max_velocity_s = t2;
     } else {
         // Both roots are negative - we've already passed max velocity
-        // or we're decelerating away from it
+        // (infeasible scenario, but handle coherently)
         delta_t_max_velocity_s = std::numeric_limits<double>::infinity();
     }
 }

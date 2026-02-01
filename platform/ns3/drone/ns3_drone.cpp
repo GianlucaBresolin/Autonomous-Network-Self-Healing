@@ -200,9 +200,6 @@ void Ns3Drone::handleCorePacket(const ::Packet& pkt) {
       m_last_acked_seq = ack.seq;
       m_waiting_ack = false;
 
-      // std::cout << "[ACK RX] t=" << m_last_ack_rx_s << "s drone=" << static_cast<int>(m_id)
-      //           << " seq=" << ack.seq << std::endl;
-
       // Treat the base station as a regular neighbor entry.
       // We translate the ACK's embedded base info into the same payload format used
       // by NeighborManager broadcasts: [id][hops][double coords...].
@@ -363,9 +360,6 @@ void Ns3Drone::sendHelpProxy() {
   m_comm.send(out);
 
   help_proxy_sent = true;
-
-  // HELP_PROXY is the trigger to start the mission behavior.
-  // startMission();
 }
 
 bool Ns3Drone::isBaseReachable() const {
