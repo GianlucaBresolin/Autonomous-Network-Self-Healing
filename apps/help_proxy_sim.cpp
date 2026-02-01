@@ -40,14 +40,15 @@ int main(int argc, char* argv[]) {
 
   double maxRangeMeters = 50.0;
   uint16_t port = 9999;
-  double simSeconds = 600.0;
+  double simSeconds = 300.0;
   double kAtt = 1.0;
-  double kRep = 5.0;
-  double dSafe = 1.0;
+  double kRep = 8.0;
+  double dSafe = 2.0;
   double vMax = 2.5;
   double droneWeightKg = 0.029;
   std::string csvOut = "";
-  std::string animOut = "output/drone-simulation.xml";
+  std::string animOut = "/output/drone-simulation.xml";
+
 
   CommandLine cmd;
   cmd.AddValue("maxRangeMeters", "Radio max range cutoff (coverage)", maxRangeMeters);
@@ -74,9 +75,9 @@ int main(int argc, char* argv[]) {
   // Keep it within range of at least one other drone (drone 3) so the HELP_PROXY can be received,
   // while keeping it far enough from the base (>= 50m) that it doesn't re-enter immediately.
   EnsureMobility(nodes.Get(0), Vector(0.0, 0.0, 0.0));
-  EnsureMobility(nodes.Get(1), Vector(20.0, 10.0, 0.0));
-  EnsureMobility(nodes.Get(2), Vector(60.0, 15.0, 0.0));
-  EnsureMobility(nodes.Get(3), Vector(40.0, 20.0, 0.0));
+  EnsureMobility(nodes.Get(1), Vector(30.0, 25.0, 0.0));
+  EnsureMobility(nodes.Get(2), Vector(40.0, 15.0, 0.0));
+  EnsureMobility(nodes.Get(3), Vector(60.0, 20.0, 0.0));
 
   Ns3BaseStation base(0, nodes.Get(0));
   base.setPosition(0.0, 0.0, 0.0);
@@ -126,9 +127,18 @@ int main(int argc, char* argv[]) {
 
   std::cout << "[Sim] base coverage=" << maxRangeMeters << "m, drones=3, stop=" << simSeconds << "s" << std::endl;
 
-  if (!animOut.empty()) {
-    AnimationInterface anim(animOut);
+  AnimationInterface anim(animOut);
+  anim.SetBackgroundImage("whiteBackground.png", -10, -10, 200, 200, true);
+  uint32_t baseStationIcon = anim.AddResource("baseStation.png");
+  uint32_t droneIcon = anim.AddResource("drone.png");
+
+  anim.UpdateNodeImage(0, baseStationIcon);
+  anim.UpdateNodeSize(0, 10, 10);
+  for (uint32_t i = 1; i <= 3; ++i) {
+    anim.UpdateNodeImage(i, droneIcon);
+    anim.UpdateNodeSize(i, 10, 10);
   }
+  
   Simulator::Stop(Seconds(simSeconds));
   Simulator::Run();
   Simulator::Destroy();

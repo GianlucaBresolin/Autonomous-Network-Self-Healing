@@ -51,9 +51,9 @@ class Ns3BaseStation {
   void dispatchPacket(const ::Packet& pkt);
   void handleCorePacket(const ::Packet& pkt);
 
-  void handlePositionUpdate(const PositionUpdateMsg& msg);
+  void handlePositionUpdate(const PositionUpdateMsg& msg, uint8_t relay_src);
 
-  void sendPositionAck(uint8_t drone_id, uint16_t seq);
+  void sendPositionAck(uint8_t drone_id, uint16_t seq, uint8_t relay_src);
 
   uint8_t m_id;
   ::ns3::Ptr<::ns3::Node> m_node;
@@ -69,6 +69,6 @@ class Ns3BaseStation {
   std::unordered_map<uint8_t, ::ns3::Ipv4Address> m_drone_ips;
   std::unordered_map<uint8_t, PositionUpdateMsg> m_last_position;
 
-  double m_tick_dt_s = 0.5;
+  double m_tick_dt_s = 0.05;
   uint16_t m_flood_seq = 0;
 };

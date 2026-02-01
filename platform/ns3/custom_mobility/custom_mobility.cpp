@@ -1,4 +1,7 @@
 #include "platform/ns3/custom_mobility/custom_mobility.h"
+#include <iostream>
+#include <limits>
+#include <cmath>
 
 CustomMobility::CustomMobility(
     ns3::Ptr<ns3::ConstantPositionMobilityModel> mobility
@@ -24,48 +27,87 @@ void CustomMobility::setPosition(
 
     mobility->SetPosition(ns3::Vector(x, y, z));
     previous_position = mobility->GetPosition();
-    previous_time_s = clock();
+    previous_time_s = ns3::Simulator::Now().GetSeconds();
 }
 
 void CustomMobility::update(){
-    const clock_t now_s = clock();
-    const double delta_t_s = (now_s - previous_time_s) / static_cast<double>(CLOCKS_PER_SEC);
+    const double now_s = ns3::Simulator::Now().GetSeconds();
+    const double delta_t_s = now_s - previous_time_s;
     
-    // update position and velocity based on:
-    // - previous position
-    // - previous velocity
-    // - current acceleration
-    // - time elapsed since last update
+    // Skip update if no time has passed
+    if (delta_t_s <= 0.0) {
+        return;
+    }
+    
     double new_x, new_y, new_z;
-    if (delta_t_s <= delta_t_max_velocity_s) {
-        // we do not have reached max velocity
-        // pos = pos0 + v_prev * delta_t + 0.5 * a * (delta_t)^2
-        new_x = previous_position.x + velocity.x * delta_t_s + 0.5 * acceleration.x * std::pow(delta_t_s, 2);
-        new_y = previous_position.y + velocity.y * delta_t_s + 0.5 * acceleration.y * std::pow(delta_t_s, 2);
-        new_z = previous_position.z + velocity.z * delta_t_s + 0.5 * acceleration.z * std::pow(delta_t_s, 2);
+    
+    // Determine if we will reach max velocity during this time step
+    const bool will_reach_max = (delta_t_max_velocity_s > 0.0) && 
+                                 !std::isinf(delta_t_max_velocity_s) && 
+                                 (delta_t_s > delta_t_max_velocity_s);
+    
+    if (!will_reach_max) {
+        // Case 1: We won't reach max velocity in this time step
+        // Apply standard kinematic equations: pos = pos0 + v*t + 0.5*a*t^2
         
-        // update velocity: v = v0 + a * delta_t
-        velocity.x += acceleration.x * delta_t_s;
-        velocity.y += acceleration.y * delta_t_s;
-        velocity.z += acceleration.z * delta_t_s;
-    } else {
-        // we have reached max velocity
-        const double delta_constant_velocity_s = delta_t_s - delta_t_max_velocity_s; // time at constant max velocity
+        // First update velocity
+        Vector3D new_velocity = velocity;
+        new_velocity.x += acceleration.x * delta_t_s;
+        new_velocity.y += acceleration.y * delta_t_s;
+        new_velocity.z += acceleration.z * delta_t_s;
 
-        // pos = pos0 + v_prev * delta_t_max_velocity + 0.5 * a * (delta_t_max_velocity)^2 + v_max * delta_constant_velocity
-        new_x = previous_position.x + velocity.x * delta_t_max_velocity_s + 0.5 * acceleration.x * std::pow(delta_t_max_velocity_s, 2) + velocity.x * delta_constant_velocity_s;
-        new_y = previous_position.y + velocity.y * delta_t_max_velocity_s + 0.5 * acceleration.y * std::pow(delta_t_max_velocity_s, 2) + velocity.y * delta_constant_velocity_s;
-        new_z = previous_position.z + velocity.z * delta_t_max_velocity_s + 0.5 * acceleration.z * std::pow(delta_t_max_velocity_s, 2) + velocity.z * delta_constant_velocity_s;
-            
-        // update velocity: v = v0 + a * delta_t_max_velocity (its magnitude is
-        // max_velocity)
-        velocity.x += acceleration.x * delta_t_max_velocity_s;
-        velocity.y += acceleration.y * delta_t_max_velocity_s;
-        velocity.z += acceleration.z * delta_t_max_velocity_s;
+        // Clamp velocity if it exceeds max_velocity
+        // (case in which we are already at max velocity but we are changing
+        // direction) 
+        if (max_velocity > 0.0 && new_velocity.module() > max_velocity) {
+            new_velocity = new_velocity.unit_vector() * max_velocity;
+        }
+        
+        // Use average velocity for position update (trapezoidal integration)
+        const double avg_vx = (velocity.x + new_velocity.x) / 2.0;
+        const double avg_vy = (velocity.y + new_velocity.y) / 2.0;
+        const double avg_vz = (velocity.z + new_velocity.z) / 2.0;
+        
+        new_x = previous_position.x + avg_vx * delta_t_s;
+        new_y = previous_position.y + avg_vy * delta_t_s;
+        new_z = previous_position.z + avg_vz * delta_t_s;
+        
+        velocity = new_velocity;
+    } else {
+        // Case 2: We reach max velocity during this time step
+        const double t_accel = delta_t_max_velocity_s;  // time accelerating
+        const double t_coast = delta_t_s - t_accel;     // time at constant max velocity
+        
+        // Compute velocity at the transition point (when we hit max velocity)
+        Vector3D v_at_max(
+            velocity.x + acceleration.x * t_accel,
+            velocity.y + acceleration.y * t_accel,
+            velocity.z + acceleration.z * t_accel
+        );
+
+        // Clamp velocity if it exceeds max_velocity
+        // (should not happen here, but keep for safety)
+        if (max_velocity > 0.0 && v_at_max.module() > max_velocity) {
+            v_at_max = v_at_max.unit_vector() * max_velocity;
+        }
+        
+        // Position update in two phases:
+        // Phase 1: accelerate using average velocity
+        const double avg_vx_accel = (velocity.x + v_at_max.x) / 2.0;
+        const double avg_vy_accel = (velocity.y + v_at_max.y) / 2.0;
+        const double avg_vz_accel = (velocity.z + v_at_max.z) / 2.0;
+        
+        // Phase 2: coast at max velocity
+        new_x = previous_position.x + avg_vx_accel * t_accel + v_at_max.x * t_coast;
+        new_y = previous_position.y + avg_vy_accel * t_accel + v_at_max.y * t_coast;
+        new_z = previous_position.z + avg_vz_accel * t_accel + v_at_max.z * t_coast;
+        
+        velocity = v_at_max;
     }
 
     previous_time_s = now_s;
-    mobility->SetPosition(ns3::Vector(new_x, new_y, new_z));
+    previous_position = ns3::Vector(new_x, new_y, new_z);
+    mobility->SetPosition(previous_position);
 }
 
 std::vector<double> CustomMobility::getPosition() {
@@ -85,47 +127,76 @@ std::vector<double> CustomMobility::getPosition() {
     };
 }
 
-void CustomMobility::updateVelocity(const Vector3D new_acceleration, const double max_velocity) {
-    // update position and velocity
+void CustomMobility::updateVelocity(const Vector3D new_acceleration, const double new_max_velocity) {
+    // First, apply any pending motion from the previous acceleration
     update();
 
-    // set new acceleration 
+    // Store the new acceleration and max velocity
     acceleration = new_acceleration;
-    delta_t_max_velocity_s = 0.0; 
-    if (acceleration.module() != 1e-6) {
-        // set new delta_time_max_velocity_s = (-B +- sqrt(B^2 - 4AC)) / 2A
-        // where:
-        // A = a_x^2 + a_y^2 + a_z^2
-        // B = 2 * (v_x * a_x + v_y * a_y + v_z * a_z)
-        // C = v_x^2 + v_y^2 + v_z^2 - max_velocity^2
-        const double A = std::pow(acceleration.x, 2) + std::pow(acceleration.y, 2) + std::pow(acceleration.z, 2);
-        const double B = 2.0 * (velocity.x * acceleration.x + velocity.y * acceleration.y + velocity.z * acceleration.z);
-        const double C = std::pow(velocity.x, 2) + std::pow(velocity.y, 2) + std::pow(velocity.z, 2) - std::pow(max_velocity, 2);
-        if (A != 0) {
-            const double discriminant = std::pow(B, 2) - 4.0 * A * C;
-            if (discriminant >= 0) {
-                const double sqrt_discriminant = std::sqrt(discriminant);
-                const double t1 = (-B + sqrt_discriminant) / (2.0 * A);
-                const double t2 = (-B - sqrt_discriminant) / (2.0 * A);
-                // we want the smallest positive root
-                if (t1 >= 0 && t2 >= 0) {
-                    if (velocity.module() == max_velocity &&(
-                        (acceleration.x * velocity.x < 0) ||
-                        (acceleration.y * velocity.y < 0) ||
-                        (acceleration.z * velocity.z < 0)
-                    )) {
-                        // a deceleration case: take the larger root since the
-                        // smaller is 0 (we are already at max velocity)
-                        delta_t_max_velocity_s = std::max(t1, t2);
-                    } else {
-                        delta_t_max_velocity_s = std::min(t1, t2);
-                    }
-                } else if (t1 >= 0) {
-                    delta_t_max_velocity_s = t1;
-                } else if (t2 >= 0) {
-                    delta_t_max_velocity_s = t2;
-                } 
-            }
-        }
+    max_velocity = new_max_velocity;
+    delta_t_max_velocity_s = 0.0;
+    
+    if (acceleration.module() == 0.0 || max_velocity <= 0.0) {
+        return;
+    }
+    
+    // Check if we're already at or above max velocity
+    const double current_speed = velocity.module();
+    if (current_speed >= max_velocity) {
+        // Already at max velocity - clamp and set delta_t to 0
+        velocity = velocity.unit_vector() * max_velocity;
+        delta_t_max_velocity_s = 0.0;
+        return;
+    }
+    
+    // Calculate time until we reach max velocity
+    // We need to solve: |v0 + a*t|^2 = v_max^2
+    // Expanding: (v0.x + a.x*t)^2 + (v0.y + a.y*t)^2 + (v0.z + a.z*t)^2 = v_max^2
+    // This gives: A*t^2 + B*t + C = 0
+    // where:
+    //   A = |a|^2
+    //   B = 2 * (v0 · a)
+    //   C = |v0|^2 - v_max^2
+    
+    const double A = std::pow(acceleration.x, 2) + std::pow(acceleration.y, 2) + std::pow(acceleration.z, 2);
+    const double B = 2.0 * (velocity.x * acceleration.x + velocity.y * acceleration.y + velocity.z * acceleration.z);
+    const double C = std::pow(velocity.x, 2) + std::pow(velocity.y, 2) + std::pow(velocity.z, 2) - std::pow(max_velocity, 2);
+    
+    if (A == 0.0) {
+        // Zero acceleration, we'll never reach max velocity through
+        // acceleration 
+        delta_t_max_velocity_s = std::numeric_limits<double>::infinity();
+        return;
+    }
+    
+    const double discriminant = B * B - 4.0 * A * C;
+    
+    if (discriminant < 0.0) {
+        // No real solution - acceleration won't bring us to max velocity
+        // (infeasible scenario, but handle coherently)
+        delta_t_max_velocity_s = std::numeric_limits<double>::infinity();
+        return;
+    }
+    
+    const double sqrt_discriminant = std::sqrt(discriminant);
+    const double t1 = (-B + sqrt_discriminant) / (2.0 * A);
+    const double t2 = (-B - sqrt_discriminant) / (2.0 * A);
+    
+    // We want the smallest positive root
+    // The two roots represent when speed increases to max_velocity and when it
+    // decreases back
+    
+    if (t1 >= 0.0 && t2 >= 0.0) {
+        // Both roots are positive - take the smaller one
+        // This is when we first reach max velocity
+        delta_t_max_velocity_s = std::min(t1, t2);
+    } else if (t1 >= 0.0) {
+        delta_t_max_velocity_s = t1;
+    } else if (t2 >= 0.0) {
+        delta_t_max_velocity_s = t2;
+    } else {
+        // Both roots are negative - we've already passed max velocity
+        // (infeasible scenario, but handle coherently)
+        delta_t_max_velocity_s = std::numeric_limits<double>::infinity();
     }
 }

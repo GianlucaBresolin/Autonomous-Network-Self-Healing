@@ -61,11 +61,7 @@ void Controller::step(
         return;
     }
     if (!mission_active) {
-        // Mission inactive: idle behavior
-        Vector3D idle_acceleration{0.0, 0.0, 0.0};
-        velocity_actuator->applyVelocity(idle_acceleration, V_max);
-
-        // Still broadcast our neighbor info while idling.
+        // Mission inactive: idle behavior. Still broadcast our neighbor info while idling.
         position->retrieveCurrentPosition();
         neighbor_manager->sendToNeighbors(
             self_id,
@@ -90,12 +86,6 @@ void Controller::step(
         }
         if (diff.module() < D_safe) {
             // Repulsive force
-            if (self_id == 1) {
-                if (diff.x < min_difference) {
-                    min_difference = diff.x;
-                    std::cout << "New min difference: " << min_difference << std::endl;
-                }
-            }
             computeRepulsiveForces(diff, F_tot);
         }
     }
