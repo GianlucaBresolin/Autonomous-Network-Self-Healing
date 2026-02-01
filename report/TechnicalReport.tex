@@ -8,7 +8,6 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{stfloats}
-\usepackage{algorithm2e}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -263,7 +262,8 @@ than the current drone's hop count (i.e., the preceding and following drones in
 the relay chain), thus driving the drone toward the geometric midpoint between
 them.
 \begin{equation} 
-    {F}_{tot} = F_{tot} + K_{att} \cdot (\vec{p}_j - \vec{p}_i) \quad \forall j\in \{N_{prev} \cup N_{next}\}
+    {F}_{tot} = F_{tot} + K_{att} \cdot (\vec{p}_j - \vec{p}_i) 
+    \quad \forall j\in \{N_{prev} \cup N_{next}\} 
 \end{equation}
 
 To avoid collisions, when the neighbor is closer than a safety threshold
@@ -274,7 +274,8 @@ force is obtained from all neighbors, including also peers (i.e., drones with
 the same hop count value). 
 
 \begin{gather}
-    \vec{F}_{tot} = \vec{F}_{tot} - K_{rep} \cdot \left(\frac{1}{dist^2}\right) \cdot \frac{\vec{p}_j - \vec{p}_i}{dist} \quad \forall j \in \{N \mid dist < D_{safe}\} \\
+    \vec{F}_{tot} = \vec{F}_{tot} - K_{rep} \cdot \left(\frac{1}{dist^2}\right) 
+    \cdot \frac{\vec{p}_j - \vec{p}_i}{dist} \quad \forall j \in \{N \mid dist < D_{safe}\} \\
     \text{where } dist = \|\vec{p}_i - \vec{p}_j\|
 \end{gather}
 
@@ -313,15 +314,14 @@ UDP sockets bound to a single configurable port.
 
 \subsection{Scenario Configuration}
 The simulation generates four \textit{ns-3} nodes: one base station ($B$) and
-three drones ($D_1$, $D_2$, $D_3$). The initial positions are chosen to create a
-partition between one drone and the base station, while keeping it connected to
-the rest of the swarm.  
+three drones ($D_1$, $D_2$, $D_3$). The initial positions are chosen to maintain all
+the drones inside the coverage area of the base station.  
 The base station is placed at the origin $(0,0,0)$ while the drones are located
-at $(20,10,0)$, $(60,15,0)$ and $(40,20,0)$. \\
+at $(40,15,0)$, $(60,20,0)$ and $(30,25,0)$. \\
 The base station is responsible for triggering flooding to enable hop discovery:
 in this simulation, our base station schedules a \texttt{START} flood message
 with drone $D_1$ as initiator every 0.5 \, s. \\
-Regarding drones, each one sets its periodic tick at 0.5 \, s: each tick implies
+Regarding drones, each one sets its periodic tick at 0.05 \, s: each tick implies
 three main actions, performed in the following order:
 \begin{itemize}
     \item sends a \texttt{PositionUpdate} message to the base station via unicast;
@@ -329,12 +329,12 @@ three main actions, performed in the following order:
     \texttt{HELP\_PROXY} request exactly once; 
     \item runs one controller step (idle or mission mode).
 \end{itemize}
-To avoid drift accumulation, each next tick event is scheduled exactly 0.5
+To avoid drift accumulation, each next tick event is scheduled exactly 0.05
 \, s after the previous tick event, regardless of the time taken to perform the
 actions above, even if the protocol does not require strict synchronization. \\ 
 
 In this configuration, $D_2$ starts outside the coverage area of the base
-station (50 \, m): this will lead the drone to send periodic
+station (50 \, m), this will lead the drone to send periodic 
 \texttt{PositionUpdate} messages, without receiving \texttt{PositionAck}
 responses from the base station, while still remaining within the range of other
 drones, so that its broadcast help request can be received. \\
@@ -354,7 +354,7 @@ Accordingly with the \textit{Crazyflie 2.1} specifications, each drone is
 characterized by the following parameters:
 \begin{itemize}
     \item mass = 0.029 \, kg;
-    \item maximum velocity $V_{max}$ = 2.5 \, m/s.
+    \item maximum velocity $V_{max}$ = 1 \, m/s.
 \end{itemize}
 
 \subsection{Mobility Model}
@@ -424,7 +424,7 @@ The simulation parameters are described in Table ~\ref{tab:sim-params}.\\
 \textbf{Parameter} & \textbf{Symbol} & \textbf{Description} \\ \hline
 Base station coverage radius & $R_{max}$ & Area inside which drones have a direct link with the base \\ \hline
 Drone mass & $m$ & Mass of a drone (CrazyFlie 2.1 in our simulation) \\ \hline
-Max drone speed & $V_{max}$ & Max speed (2.5x higher compared to the CrazyFlie 2.1) \\ \hline
+Max drone speed & $V_{max}$ & Max speed (the exact same of the CrazyFlie 2.1) \\ \hline
 Attractive gain & $K_{att}$ & Forces attracting drones with different hop count \\ \hline
 Repulsive gain & $K_{rep}$ & Forces repulsing drones \\ \hline
 Safety distance & $D_{safe}$ & Distance below which the repulsive forces start acting  \\ \hline
@@ -448,12 +448,12 @@ configurations. \\
 \textbf{Parameter} & \textbf{Value} \\ \hline
 Base station coverage radius & $50$ m \\ \hline
 Drone mass & $29$ g \\ \hline
-Max drone speed & $2.5$ m/s \\ \hline
+Max drone speed & $1$ m/s \\ \hline
 Attractive gain & $1$ \\ \hline
-Repulsive gain & $5$ \\ \hline
-Safety distance & $1$  \\ \hline
-Node tick distance & $0.5$ s \\ \hline
-Simulation duration & $600$ s \\ \hline
+Repulsive gain & $8$ \\ \hline
+Safety distance & $2$  \\ \hline
+Node tick distance & $0.05$ s \\ \hline
+Simulation duration & $150$ s \\ \hline
 \end{tabular}
 \end{table}
 
@@ -513,11 +513,11 @@ multi-hop relay chain that restores connectivity. \\
 The trajectory of each drone during the simulation is visualized in
 Figure~\ref{fig:drone-trajectories}, where the repositioning behavior and
 final formation can be observed. \\
-\fc{Avete esperimenti su "connectivity" or "packet delivery ratio" over time (prima durante e dopo l'algoritmo) per dimostrare che ha funzionato}
+
 \begin{figure*}[ht]
     \centering
     \includegraphics[width=1.0\textwidth]{drone_trajectories.png}
-    \caption{Drone Trajectories During Self-Healing Simulation\fc{non so se è il mio computer ma queste figure non sono molto chiare (ne in senso di colore ne in senso di "messaggio che dovrebbero trasmettere"}}
+    \caption{Drone Trajectories During Self-Healing Simulation}
     \label{fig:drone-trajectories}
 \end{figure*}
 
@@ -532,11 +532,11 @@ oscillation value) and are summarized in Table~\ref{tab:sim-results}. \\
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Measurement} & \textbf{Value} \\ \hline
-Average First Oscillation & $0.424$ m \\ \hline
-Average Oscillation & $0.395$ m \\ \hline
-Average Last Oscillation & $0.353$ m \\ \hline
-Average Min Distance & $1.296$ m \\ \hline
-Average Time to Target & $145.35$ s \\ \hline
+Average First Oscillation & $0.09$ m \\ \hline
+Average Oscillation & $0.0944$ m \\ \hline
+Average Last Oscillation & $0.098$ m \\ \hline
+Average Min Distance & $1.46$ m \\ \hline
+Average Time to Target & $13.12$ s \\ \hline
 \end{tabular}
 \end{table}
 
@@ -569,7 +569,7 @@ sent toward the base station, while broadcast communication is used within the
 swarm. The system was evaluated in a scenario where one drone starts outside the
 base station coverage and sends a \texttt{HELP\_PROXY} request. The results,
 together with the tuning process, show that the swarm is able to form a
-multi-hop relay chain. Oscillations remain limited, and the safety margins are
+multi-hop relay chain. Oscillations remain limited, and the safety margins are 
 acceptable under the tested parameters. \\
 
 Beside these positive results, our implementation and simulation requires some
