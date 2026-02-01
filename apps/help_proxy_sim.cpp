@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
   double kAtt = 1.0;
   double kRep = 8.0;
   double dSafe = 2.0;
-  double vMax = 2.5;
+  double vMax = 1.0;
   double droneWeightKg = 0.029;
   std::string csvOut = "";
   std::string animOut = "/output/drone-simulation.xml";
