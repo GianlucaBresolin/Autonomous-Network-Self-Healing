@@ -75,9 +75,9 @@ int main(int argc, char* argv[]) {
   // Keep it within range of at least one other drone (drone 3) so the HELP_PROXY can be received,
   // while keeping it far enough from the base (>= 50m) that it doesn't re-enter immediately.
   EnsureMobility(nodes.Get(0), Vector(0.0, 0.0, 0.0));
-  EnsureMobility(nodes.Get(1), Vector(30.0, 25.0, 0.0));
-  EnsureMobility(nodes.Get(2), Vector(40.0, 15.0, 0.0));
-  EnsureMobility(nodes.Get(3), Vector(60.0, 20.0, 0.0));
+  EnsureMobility(nodes.Get(1), Vector(40.0, 15.0, 0.0));
+  EnsureMobility(nodes.Get(2), Vector(60.0, 20.0, 0.0));
+  EnsureMobility(nodes.Get(3), Vector(30.0, 25.0, 0.0));
 
   Ns3BaseStation base(0, nodes.Get(0));
   base.setPosition(0.0, 0.0, 0.0);

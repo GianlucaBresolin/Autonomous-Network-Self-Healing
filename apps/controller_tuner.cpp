@@ -49,6 +49,7 @@ struct RunMetrics {
   double avgAvgOsc = 0.0;
   double avgMinDistance = -1.0;
   double avgTimeToTarget = -1.0;
+  double firstRelayedAckTime = -1.0;  // Time when lost drone first received relayed ACK
   int dronesWithOscillations = 0;
   int totalDrones = 0;
   bool allStrictlyReducing = false;
@@ -397,9 +398,25 @@ RunMetrics EvaluateRun(
     return {};
   }
 
+  double firstRelayedAckTime = -1.0;
   char buffer[4096];
   while (fgets(buffer, sizeof(buffer), pipe)) {
-    (void)buffer;
+    std::string line(buffer);
+    // Parse [RELAYED_ACK_RX] t=<time>s drone=<id> seq=<seq>
+    if (firstRelayedAckTime < 0.0 && line.find("[RELAYED_ACK_RX]") != std::string::npos) {
+      size_t tPos = line.find("t=");
+      if (tPos != std::string::npos) {
+        size_t endPos = line.find("s", tPos + 2);
+        if (endPos != std::string::npos) {
+          std::string timeStr = line.substr(tPos + 2, endPos - tPos - 2);
+          try {
+            firstRelayedAckTime = std::stod(timeStr);
+          } catch (...) {
+            // Ignore parse errors
+          }
+        }
+      }
+    }
   }
   pclose(pipe);
 
@@ -479,6 +496,7 @@ RunMetrics EvaluateRun(
   if (metrics.avgMinDistance < 0.0) {
     metrics.score += 1e5;
   }
+  metrics.firstRelayedAckTime = firstRelayedAckTime;
 
   return metrics;
 }
@@ -510,6 +528,7 @@ int main(int argc, char* argv[]) {
           << " allReducing=" << (metrics.allStrictlyReducing ? 1 : 0)
           << " avgMinDist=" << metrics.avgMinDistance
           << " avgTimeToTarget=" << metrics.avgTimeToTarget
+          << " firstRelayedAckTime=" << metrics.firstRelayedAckTime
           << " score=" << metrics.score
           << std::endl;
 
@@ -553,6 +572,7 @@ int main(int argc, char* argv[]) {
             << " allReducing=" << (bestMetrics.allStrictlyReducing ? 1 : 0)
             << " avgMinDist=" << bestMetrics.avgMinDistance
             << " avgTimeToTarget=" << bestMetrics.avgTimeToTarget
+            << " firstRelayedAckTime=" << bestMetrics.firstRelayedAckTime
             << " score=" << bestMetrics.score
             << std::endl;
 

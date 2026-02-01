@@ -196,6 +196,11 @@ void Ns3Drone::handleCorePacket(const ::Packet& pkt) {
       // This is critical for the flood hop-count calculation to remain accurate.
       if (!help_proxy_sent) {
         m_last_ack_rx_s = ::ns3::Simulator::Now().GetSeconds();
+      } else {
+        // Log when the lost drone receives a relayed ACK
+        std::cout << "[RELAYED_ACK_RX] t=" << ::ns3::Simulator::Now().GetSeconds() 
+                  << "s drone=" << static_cast<int>(m_id)
+                  << " seq=" << ack.seq << std::endl;
       }
       m_last_acked_seq = ack.seq;
       m_waiting_ack = false;
