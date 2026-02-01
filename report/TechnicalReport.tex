@@ -8,6 +8,7 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{stfloats}
+\usepackage{algorithm2e}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -79,7 +80,7 @@ allows different units to carry specific equipment, making the system highly
 adaptable for complex multi-task operations. \\
 However, drone swarms also face challenges, particularly in maintaining robust 
 communication among drones and with the base station and in coordinating the
-formation control laws required to perform tasks effectively. \\
+formation control laws required to perform tasks effectively~\cite{ouyang2023formation}. \\
 Specifically, in decentralized swarm operations, communication between a
 specific agent and the base station is frequently interrupted by signal jamming
 or geographic occlusions. In such scenarios, it is crucial for the swarm to 
@@ -133,7 +134,7 @@ Signal-to-Noise Ratio (SNR) for both links within the multi-hop relay chain. \\
 The system architecture is built around two node roles: a stationary Base
 Station ($B$) and a set of mobile Drones ($D_i$) running the same overall
 control stack. To enable a future hardware verification phase, the architecture
-mirrors the Crazyflie~2.1 ecosystem as closely as possible. In particular, it
+mirrors the Crazyflie~2.1 ecosystem~\cite{bitcraze_crazyflie} as closely as possible. In particular, it
 adopts the characteristic ``two-sided'' communication pattern offered by the
 Crazyflie 2.4\,GHz radio: the base station communicates with individual drones
 using unicast, while drones coordinate with each other using broadcast.
@@ -247,7 +248,7 @@ special-case logic.
 \subsection{Formation Control via Virtual Spring-Damper Model}
 Once hop distance and neighbor positions are available, the physical
 ``self-healing'' behavior is implemented through a controller based on a
-virtual spring-damper model. The controller runs periodically and produces a
+virtual spring-damper model~\cite{piemngam2019virtual, chen2015virtual}. The controller runs periodically and produces a
 motion command by combining two effects: attraction toward relevant neighbors
 (to close the gap and form a relay) and repulsion at short range (to preserve
 safe separation). \\
@@ -262,8 +263,7 @@ than the current drone's hop count (i.e., the preceding and following drones in
 the relay chain), thus driving the drone toward the geometric midpoint between
 them.
 \begin{equation} 
-    {F}_{tot} = F_{tot} + K_{att} \cdot (\vec{p}_j - \vec{p}_i) 
-    \quad \forall j\in \{N_{prev} \cup N_{next}\} 
+    {F}_{tot} = F_{tot} + K_{att} \cdot (\vec{p}_j - \vec{p}_i) \quad \forall j\in \{N_{prev} \cup N_{next}\}
 \end{equation}
 
 To avoid collisions, when the neighbor is closer than a safety threshold
@@ -274,8 +274,7 @@ force is obtained from all neighbors, including also peers (i.e., drones with
 the same hop count value). 
 
 \begin{gather}
-    \vec{F}_{tot} = \vec{F}_{tot} - K_{rep} \cdot \left(\frac{1}{dist^2}\right) 
-    \cdot \frac{\vec{p}_j - \vec{p}_i}{dist} \quad \forall j \in \{N \mid dist < D_{safe}\} \\
+    \vec{F}_{tot} = \vec{F}_{tot} - K_{rep} \cdot \left(\frac{1}{dist^2}\right) \cdot \frac{\vec{p}_j - \vec{p}_i}{dist} \quad \forall j \in \{N \mid dist < D_{safe}\} \\
     \text{where } dist = \|\vec{p}_i - \vec{p}_j\|
 \end{gather}
 
@@ -295,7 +294,7 @@ being able to ``switch on'' coordinated motion when a disconnection is detected.
 
 \section{Experimental Setup}
 The proposed self-healing protocol was evaluated through a custom simulation
-scenario implemented in \textit{ns-3}, a discrete-event network simulator widely
+scenario implemented in \textit{ns-3}~\cite{ns3simulator}, a discrete-event network simulator widely
 used for research and educational purposes. 
 
 \subsection{Ns-3 Environment}
@@ -385,7 +384,7 @@ constraint on each agent. \\
 To visualize the simulation results, we integrated the
 \texttt{AnimationInterface}. This component generates an XML trace file
 based on the drones' mobility states stored in the \textit{ns-3} mobility
-models, which can be subsequently rendered using the \textit{NetAnim}
+models, which can be subsequently rendered using the \textit{NetAnim}~\cite{netanim}
 visualization tool. 
 
 \section{Results and Analysis}
@@ -513,7 +512,6 @@ multi-hop relay chain that restores connectivity. \\
 The trajectory of each drone during the simulation is visualized in
 Figure~\ref{fig:drone-trajectories}, where the repositioning behavior and
 final formation can be observed. \\
-
 \begin{figure*}[ht]
     \centering
     \includegraphics[width=1.0\textwidth]{drone_trajectories.png}
@@ -537,6 +535,7 @@ Average Oscillation & $0.0944$ m \\ \hline
 Average Last Oscillation & $0.098$ m \\ \hline
 Average Min Distance & $1.46$ m \\ \hline
 Average Time to Target & $13.12$ s \\ \hline
+Connection Restoration Time & $1.669$ s \\ \hline
 \end{tabular}
 \end{table}
 
@@ -552,6 +551,30 @@ $\mathbf{a}=\mathbf{F}_{tot}/m$, the mass parameter \textit{m} indirectly
 acts as damping-like factor on the control effort, with higher mass values
 leading to slower responses and reduced oscillations, at the cost of longer
 convergence times. \\
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\columnwidth]{connections_over_time.png}
+    \caption{Nodes connections over the first 5 seconds}
+    \label{fig:connections_over_time}
+\end{figure}
+Figure~\ref{fig:connections_over_time} shows the number of active 
+connections for each node during the first five seconds of the simulation. 
+At simulation  start, the base station maintains direct connectivity 
+with drones $D_1$ and $D_3$, while $D_2$ remains disconnected due to its
+position outside the coverage area. \\
+After the ACK timeout expires, $D_2$ broadcasts its \texttt{HELP\_PROXY} 
+request at $t \approx 1.5$\,s, triggering the relay mechanism. The base 
+station connectivity is restored at $t=1.58$\,s, when the first relayed 
+\texttt{PositionUpdate} from $D_2$ reaches it through a helper drone. 
+Shortly after, at $t=1.67$\,s, the lost drone $D_2$ receives its first 
+relayed \texttt{PositionAck}, confirming end-to-end connectivity. \\
+It is worth noting that these restoration times remain constant across
+different parameter configurations because of the \textit{Crazyflie} mirrored
+architecture. In fact, since the relaying drone is always within communication
+range of both the base station and the lost drone, the relay path is 
+established immediately after the \texttt{HELP\_PROXY} broadcast, regardless
+of the controller gains or safety distance settings. \\
 
 \section{Conclusions}
 This work presents an autonomous self-healing protocol for drone swarms. The
@@ -569,7 +592,7 @@ sent toward the base station, while broadcast communication is used within the
 swarm. The system was evaluated in a scenario where one drone starts outside the
 base station coverage and sends a \texttt{HELP\_PROXY} request. The results,
 together with the tuning process, show that the swarm is able to form a
-multi-hop relay chain. Oscillations remain limited, and the safety margins are 
+multi-hop relay chain. Oscillations remain limited, and the safety margins are
 acceptable under the tested parameters. \\
 
 Beside these positive results, our implementation and simulation requires some
@@ -583,13 +606,13 @@ disconnected node has an undefined hop value: during this transient phase, the
 controller treats most neighbors as having a different hop count, pulling
 helpers more aggressively until a stable gradient is established. \\
 Finally, our \texttt{CustomMobility} model advances drone states based on 
-elapsed simulation time between actuation calls. While this is sufficient for a 
-qualitative evaluation, it prevents full deterministic reproducibility when
-the simulation is run with different random seeds. Furthermore, the mobility model
-implements a simplified kinematic integration that neglects aerodynamic effects, 
-environmental disturbances, and actuator dynamics. Such abstractions may lead to an
-optimistic estimation of the controller's effectiveness compared to real-world
-conditions. \\ 
+elapsed simulation time between actuation calls. This design choice ensures
+full deterministic reproducibility across runs: each drone position is computed 
+as a function of commanded accelerations and discrete time steps. Furthermore, 
+the mobility model implements a simplified kinematic integration that neglects 
+aerodynamic effects, environmental disturbances, and actuator dynamics. 
+Such abstractions may lead to an optimistic estimation of the controller's 
+effectiveness compared to real-world conditions. \\ 
 
 Overall, despite the underlined limitations of a purely software-based
 simulation, the results suggest that a hardware validation could be feasible,
